@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ==================================================
 # Python Project Setup Script
-# uvを使用したPython環境の自動構築
+# Automatic Python environment setup using uv
 # ==================================================
 
 set -e
 
 # --------------------------------------------------
-# カラー定義
+# Color definitions
 # --------------------------------------------------
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,7 +17,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # --------------------------------------------------
-# ヘルパー関数
+# Helper functions
 # --------------------------------------------------
 print_header() {
     echo -e "\n${CYAN}🐍 Python Project Setup${NC}"
@@ -40,7 +40,7 @@ print_warning() {
     echo -e "${YELLOW}⚠${NC} $1"
 }
 
-# バージョン文字列からpyXXX形式に変換（例: 3.14.2 → py314）
+# Convert version string to pyXXX format (e.g., 3.14.2 → py314)
 get_py_version() {
     local version="$1"
     local major minor
@@ -49,13 +49,13 @@ get_py_version() {
     echo "py${major}${minor}"
 }
 
-# バージョン文字列からX.XX形式を取得（例: 3.14.2 → 3.14）
+# Get X.XX format from version string (e.g., 3.14.2 → 3.14)
 get_major_minor() {
     local version="$1"
     echo "$version" | cut -d. -f1,2
 }
 
-# バージョン形式のバリデーション
+# Version format validation
 validate_version() {
     local version="$1"
     if [[ ! "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
@@ -64,26 +64,26 @@ validate_version() {
     return 0
 }
 
-# プロジェクト名のバリデーション
+# Project name validation
 validate_project_name() {
     local name="$1"
-    # 空文字チェック
+    # Empty string check
     if [[ -z "$name" ]]; then
         return 1
     fi
-    # 有効な文字のみ（英数字、ハイフン、アンダースコア）
+    # Valid characters only (alphanumeric, hyphen, underscore)
     if [[ ! "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]; then
         return 1
     fi
     return 0
 }
 
-# 最新のPythonバージョンを取得
+# Get latest Python version
 get_latest_python_version() {
     local version
     version=$(uv python list 2>/dev/null | grep -E "^cpython-[0-9]+\.[0-9]+\.[0-9]+-" | grep -v "freethreaded" | head -1 | sed 's/cpython-\([0-9.]*\)-.*/\1/')
     if [[ -z "$version" ]]; then
-        # フォールバック: 取得できなかった場合は3.13を使用
+        # Fallback: use 3.13 if unable to retrieve
         echo "3.13"
     else
         echo "$version"
@@ -91,20 +91,20 @@ get_latest_python_version() {
 }
 
 # --------------------------------------------------
-# スクリプトのディレクトリを取得
+# Get script directory
 # --------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- BEGIN GITIGNORE_FUNC ---
 # --------------------------------------------------
-# .gitignore生成関数
+# .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
     local template_file="${SCRIPT_DIR}/.gitignore.template"
     if [[ -f "$template_file" ]]; then
         cat "$template_file"
     else
-        # curl実行時のフォールバック（自動生成: build.sh）
+        # Fallback for curl execution (auto-generated: build.sh)
         cat << 'GITIGNORE_EOF'
 # ==================================================
 # Python Project .gitignore Template
@@ -192,7 +192,7 @@ GITIGNORE_EOF
 # --- END GITIGNORE_FUNC ---
 
 # --------------------------------------------------
-# pyproject.tomlにツール設定を追記
+# Append tool configuration to pyproject.toml
 # --------------------------------------------------
 append_tool_config() {
     local pyproject_file="$1"
@@ -222,56 +222,56 @@ TOML_EOF
 }
 
 # --------------------------------------------------
-# メイン処理
+# Main process
 # --------------------------------------------------
 main() {
     print_header
 
     # --------------------------------------------------
-    # 1. プロジェクト名の入力
+    # 1. Project name input
     # --------------------------------------------------
     while true; do
-        echo -ne "${CYAN}📦 プロジェクト名: ${NC}"
+        echo -ne "${CYAN}📦 Project name: ${NC}"
         read -r PROJECT_NAME
         if validate_project_name "$PROJECT_NAME"; then
             break
         else
-            print_error "無効なプロジェクト名です。英字で始まり、英数字・ハイフン・アンダースコアのみ使用できます。"
+            print_error "Invalid project name. Must start with a letter and contain only alphanumeric characters, hyphens, or underscores."
         fi
     done
 
-    # 既存ディレクトリチェック
+    # Check for existing directory
     if [[ -d "$PROJECT_NAME" ]]; then
-        print_error "ディレクトリ '$PROJECT_NAME' は既に存在します。"
+        print_error "Directory '$PROJECT_NAME' already exists."
         exit 1
     fi
 
     # --------------------------------------------------
-    # 2. Pythonバージョンの入力
+    # 2. Python version input
     # --------------------------------------------------
-    print_step "利用可能な最新Pythonバージョンを確認中..."
+    print_step "Checking latest available Python version..."
     DEFAULT_PYTHON_VERSION=$(get_latest_python_version)
-    print_success "最新バージョン: $DEFAULT_PYTHON_VERSION"
+    print_success "Latest version: $DEFAULT_PYTHON_VERSION"
 
     while true; do
-        echo -ne "${CYAN}🔢 Pythonバージョン [${DEFAULT_PYTHON_VERSION}]: ${NC}"
+        echo -ne "${CYAN}🔢 Python version [${DEFAULT_PYTHON_VERSION}]: ${NC}"
         read -r PYTHON_VERSION
         PYTHON_VERSION="${PYTHON_VERSION:-$DEFAULT_PYTHON_VERSION}"
         if validate_version "$PYTHON_VERSION"; then
             break
         else
-            print_error "無効なバージョン形式です。例: 3.13, 3.14.2"
+            print_error "Invalid version format. Example: 3.13, 3.14.2"
         fi
     done
 
     # --------------------------------------------------
-    # 3. プロジェクトタイプの選択
+    # 3. Project type selection
     # --------------------------------------------------
-    echo -e "${CYAN}📁 プロジェクトタイプを選択:${NC}"
-    echo "  1) app - アプリケーション"
-    echo "  2) lib - ライブラリ"
+    echo -e "${CYAN}📁 Select project type:${NC}"
+    echo "  1) app - Application"
+    echo "  2) lib - Library"
     while true; do
-        echo -ne "${CYAN}選択 [1]: ${NC}"
+        echo -ne "${CYAN}Selection [1]: ${NC}"
         read -r PROJECT_TYPE_CHOICE
         PROJECT_TYPE_CHOICE="${PROJECT_TYPE_CHOICE:-1}"
         case "$PROJECT_TYPE_CHOICE" in
@@ -284,113 +284,113 @@ main() {
                 break
                 ;;
             *)
-                print_error "1 または 2 を入力してください。"
+                print_error "Please enter 1 or 2."
                 ;;
         esac
     done
 
     # --------------------------------------------------
-    # 4. 開発ツールの確認
+    # 4. Development tools confirmation
     # --------------------------------------------------
-    echo -ne "${CYAN}🛠️  開発ツール (ruff, mypy, pytest) をインストール [Y/n]: ${NC}"
+    echo -ne "${CYAN}🛠️  Install development tools (ruff, mypy, pytest) [Y/n]: ${NC}"
     read -r INSTALL_DEV_TOOLS
     INSTALL_DEV_TOOLS="${INSTALL_DEV_TOOLS:-Y}"
 
     # --------------------------------------------------
-    # 確認表示
+    # Configuration summary
     # --------------------------------------------------
     echo ""
     echo "=================================================="
-    echo -e "${YELLOW}設定内容:${NC}"
-    echo "  プロジェクト名: $PROJECT_NAME"
-    echo "  Pythonバージョン: $PYTHON_VERSION"
-    echo "  プロジェクトタイプ: $PROJECT_TYPE"
-    echo "  開発ツール: $([[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "インストールする" || echo "インストールしない")"
+    echo -e "${YELLOW}Configuration:${NC}"
+    echo "  Project name: $PROJECT_NAME"
+    echo "  Python version: $PYTHON_VERSION"
+    echo "  Project type: $PROJECT_TYPE"
+    echo "  Development tools: $([[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install" || echo "Skip")"
     echo "=================================================="
     echo ""
 
     # --------------------------------------------------
-    # セットアップ開始
+    # Start setup
     # --------------------------------------------------
-    echo -e "${GREEN}✨ セットアップを開始します...${NC}\n"
+    echo -e "${GREEN}✨ Starting setup...${NC}\n"
 
-    # 1. ディレクトリ作成
-    print_step "ディレクトリを作成中..."
+    # 1. Create directory
+    print_step "Creating directory..."
     mkdir -p "$PROJECT_NAME"
     cd "$PROJECT_NAME"
-    print_success "ディレクトリ '$PROJECT_NAME' を作成しました"
+    print_success "Created directory '$PROJECT_NAME'"
 
-    # 2. Pythonインストール
-    print_step "Python $PYTHON_VERSION をインストール中..."
+    # 2. Install Python
+    print_step "Installing Python $PYTHON_VERSION..."
     uv python install "$PYTHON_VERSION"
-    print_success "Python $PYTHON_VERSION をインストールしました"
+    print_success "Installed Python $PYTHON_VERSION"
 
-    # 3. プロジェクト初期化
-    print_step "プロジェクトを初期化中..."
+    # 3. Initialize project
+    print_step "Initializing project..."
     uv init --name "$PROJECT_NAME" --python "$PYTHON_VERSION" --"$PROJECT_TYPE"
-    print_success "プロジェクトを初期化しました"
+    print_success "Initialized project"
 
-    # 4. 開発ツールのインストール
+    # 4. Install development tools
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
-        print_step "開発ツールをインストール中..."
+        print_step "Installing development tools..."
         uv add --dev ruff mypy pytest
-        print_success "開発ツールをインストールしました"
+        print_success "Installed development tools"
     fi
 
-    # 5. 依存関係の同期
-    print_step "依存関係を同期中..."
+    # 5. Sync dependencies
+    print_step "Syncing dependencies..."
     uv sync
-    print_success "依存関係を同期しました"
+    print_success "Synced dependencies"
 
-    # 6. .gitignore生成
-    print_step ".gitignore を生成中..."
+    # 6. Generate .gitignore
+    print_step "Generating .gitignore..."
     generate_gitignore > .gitignore
-    print_success ".gitignore を生成しました"
+    print_success "Generated .gitignore"
 
-    # 7. pyproject.tomlにツール設定を追記
+    # 7. Append tool configuration to pyproject.toml
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
-        print_step "pyproject.toml にツール設定を追記中..."
+        print_step "Appending tool configuration to pyproject.toml..."
         local py_version
         local major_minor
         py_version=$(get_py_version "$PYTHON_VERSION")
         major_minor=$(get_major_minor "$PYTHON_VERSION")
         append_tool_config "pyproject.toml" "$py_version" "$major_minor"
-        print_success "ツール設定を追記しました"
+        print_success "Appended tool configuration"
     fi
 
-    # 8. testsディレクトリ作成
+    # 8. Create tests directory
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
-        print_step "tests ディレクトリを作成中..."
+        print_step "Creating tests directory..."
         mkdir -p tests
         touch tests/__init__.py
-        print_success "tests ディレクトリを作成しました"
+        print_success "Created tests directory"
     fi
 
-    # 9. Git初期化
-    print_step "Git リポジトリを初期化中..."
+    # 9. Initialize Git
+    print_step "Initializing Git repository..."
     git init --quiet
-    print_success "Git リポジトリを初期化しました"
+    print_success "Initialized Git repository"
 
     # --------------------------------------------------
-    # 完了メッセージ
+    # Completion message
     # --------------------------------------------------
     echo ""
     echo "=================================================="
-    echo -e "${GREEN}🎉 セットアップが完了しました！${NC}"
+    echo -e "${GREEN}🎉 Setup complete!${NC}"
     echo "=================================================="
     echo ""
-    echo "次のステップ:"
+    echo "Next steps:"
     echo "  cd $PROJECT_NAME"
-    echo "  source .venv/bin/activate  # または: uv run python"
+    echo "  source .venv/bin/activate  # or: uv run python"
     echo ""
-    echo "便利なコマンド:"
-    echo "  uv add <package>      # パッケージを追加"
-    echo "  uv run python         # 仮想環境でPythonを実行"
-    echo "  uv run pytest         # テストを実行"
-    echo "  uv run ruff check .   # リントを実行"
-    echo "  uv run mypy .         # 型チェックを実行"
+    echo "Useful commands:"
+    echo "  uv add <package>      # Add a package"
+    echo "  uv run python         # Run Python in virtual environment"
+    echo "  uv run pytest         # Run tests"
+    echo "  uv run ruff check .   # Run linter"
+    echo "  uv run mypy .         # Run type checker"
     echo ""
 }
 
-# スクリプト実行
+# Run script
 main "$@"

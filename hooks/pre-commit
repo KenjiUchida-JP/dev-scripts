@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 # ==================================================
 # Pre-commit Hook
-# コミット前に build.sh を実行してテンプレートを同期
+# Runs build.sh to sync templates before commit
 # ==================================================
 
 set -e
 
-# リポジトリのルートディレクトリを取得
+# Get the repository root directory
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 BUILD_SCRIPT="${REPO_ROOT}/python/build.sh"
 
-# build.sh が存在するか確認
+# Check if build.sh exists
 if [[ ! -f "$BUILD_SCRIPT" ]]; then
-    echo "警告: build.sh が見つかりません: $BUILD_SCRIPT"
+    echo "Warning: build.sh not found: $BUILD_SCRIPT"
     exit 0
 fi
 
-# build.sh を実行
-echo "🔧 テンプレートを同期中..."
+# Run build.sh
+echo "🔧 Syncing templates..."
 "$BUILD_SCRIPT"
 
-# setup-project.sh に変更があれば自動でステージング
+# Auto-stage setup-project.sh if it has changes
 SETUP_SCRIPT="${REPO_ROOT}/python/setup-project.sh"
 if [[ -f "$SETUP_SCRIPT" ]]; then
     if ! git diff --quiet "$SETUP_SCRIPT" 2>/dev/null; then
-        echo "📝 setup-project.sh をステージングに追加"
+        echo "📝 Adding setup-project.sh to staging"
         git add "$SETUP_SCRIPT"
     fi
 fi
 
-echo "✅ 同期完了"
+echo "✅ Sync complete"

@@ -1,53 +1,53 @@
 #!/usr/bin/env bash
 # ==================================================
 # Git Hooks Setup Script
-# hooks/ ディレクトリの内容を .git/hooks/ にシンボリックリンク
+# Creates symbolic links from hooks/ directory to .git/hooks/
 # ==================================================
 
 set -e
 
-# カラー定義
+# Color definitions
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# リポジトリのルートディレクトリを取得
+# Get repository root directory
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_DIR="${REPO_ROOT}/hooks"
 GIT_HOOKS_DIR="${REPO_ROOT}/.git/hooks"
 
-# .git ディレクトリの存在確認
+# Check if .git directory exists
 if [[ ! -d "${REPO_ROOT}/.git" ]]; then
-    echo -e "${RED}エラー:${NC} .git ディレクトリが見つかりません"
-    echo "このスクリプトはリポジトリのルートから実行してください"
+    echo -e "${RED}Error:${NC} .git directory not found"
+    echo "Please run this script from the repository root"
     exit 1
 fi
 
-# hooks ディレクトリの存在確認
+# Check if hooks directory exists
 if [[ ! -d "$HOOKS_DIR" ]]; then
-    echo -e "${RED}エラー:${NC} hooks/ ディレクトリが見つかりません"
+    echo -e "${RED}Error:${NC} hooks/ directory not found"
     exit 1
 fi
 
-echo -e "${GREEN}🔧 Git hooks をセットアップ中...${NC}"
+echo -e "${GREEN}🔧 Setting up Git hooks...${NC}"
 
-# hooks/ 内の各ファイルに対してシンボリックリンクを作成
+# Create symbolic links for each file in hooks/
 for hook in "$HOOKS_DIR"/*; do
     if [[ -f "$hook" ]]; then
         hook_name=$(basename "$hook")
         target="${GIT_HOOKS_DIR}/${hook_name}"
 
-        # 既存のファイル/リンクがあれば削除
+        # Remove existing file/link if present
         if [[ -e "$target" || -L "$target" ]]; then
             rm "$target"
         fi
 
-        # シンボリックリンクを作成
+        # Create symbolic link
         ln -sf "../../hooks/${hook_name}" "$target"
         echo -e "  ${GREEN}✓${NC} ${hook_name}"
     fi
 done
 
 echo ""
-echo -e "${GREEN}✅ Git hooks のセットアップが完了しました！${NC}"
+echo -e "${GREEN}✅ Git hooks setup complete!${NC}"

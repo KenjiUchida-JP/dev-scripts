@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==================================================
 # Build Script
-# .gitignore.template を setup-project.sh に埋め込む
+# Embeds .gitignore.template into setup-project.sh
 # ==================================================
 
 set -e
@@ -10,43 +10,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATE_FILE="${SCRIPT_DIR}/.gitignore.template"
 TARGET_FILE="${SCRIPT_DIR}/setup-project.sh"
 
-# カラー定義
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # --------------------------------------------------
-# テンプレートファイルの存在チェック
+# Check if template file exists
 # --------------------------------------------------
 if [[ ! -f "$TEMPLATE_FILE" ]]; then
-    echo -e "${RED}エラー:${NC} $TEMPLATE_FILE が見つかりません" >&2
+    echo -e "${RED}Error:${NC} $TEMPLATE_FILE not found" >&2
     exit 1
 fi
 
 if [[ ! -f "$TARGET_FILE" ]]; then
-    echo -e "${RED}エラー:${NC} $TARGET_FILE が見つかりません" >&2
+    echo -e "${RED}Error:${NC} $TARGET_FILE not found" >&2
     exit 1
 fi
 
 # --------------------------------------------------
-# テンプレート内容を読み込み
+# Read template content
 # --------------------------------------------------
 TEMPLATE_CONTENT=$(cat "$TEMPLATE_FILE")
 
 # --------------------------------------------------
-# 新しい generate_gitignore 関数を生成
+# Generate new generate_gitignore function
 # --------------------------------------------------
 NEW_FUNCTION=$(cat << 'FUNC_START'
 # --------------------------------------------------
-# .gitignore生成関数
+# .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
     local template_file="${SCRIPT_DIR}/.gitignore.template"
     if [[ -f "$template_file" ]]; then
         cat "$template_file"
     else
-        # curl実行時のフォールバック（自動生成: build.sh）
+        # Fallback for curl execution (auto-generated: build.sh)
         cat << 'GITIGNORE_EOF'
 FUNC_START
 )
@@ -58,20 +58,20 @@ GITIGNORE_EOF
 }"
 
 # --------------------------------------------------
-# setup-project.sh を更新
-# マーカー: # --- BEGIN GITIGNORE_FUNC --- と # --- END GITIGNORE_FUNC ---
+# Update setup-project.sh
+# Markers: # --- BEGIN GITIGNORE_FUNC --- and # --- END GITIGNORE_FUNC ---
 # --------------------------------------------------
 
-# マーカーが存在するか確認
+# Check if markers exist
 if ! grep -q "# --- BEGIN GITIGNORE_FUNC ---" "$TARGET_FILE"; then
-    echo -e "${RED}エラー:${NC} マーカーが見つかりません。setup-project.sh にマーカーを追加してください" >&2
+    echo -e "${RED}Error:${NC} Markers not found. Please add markers to setup-project.sh" >&2
     exit 1
 fi
 
-# 一時ファイルを作成
+# Create temporary file
 TEMP_FILE=$(mktemp)
 
-# マーカー間を置換
+# Replace between markers
 awk -v new_func="$NEW_FUNCTION" '
     /# --- BEGIN GITIGNORE_FUNC ---/ {
         print "# --- BEGIN GITIGNORE_FUNC ---"
@@ -88,13 +88,13 @@ awk -v new_func="$NEW_FUNCTION" '
 ' "$TARGET_FILE" > "$TEMP_FILE"
 
 # --------------------------------------------------
-# 差分チェックと更新
+# Check diff and update
 # --------------------------------------------------
 if diff -q "$TARGET_FILE" "$TEMP_FILE" > /dev/null 2>&1; then
-    echo -e "${YELLOW}変更なし:${NC} $TARGET_FILE は最新です"
+    echo -e "${YELLOW}No changes:${NC} $TARGET_FILE is up to date"
     rm "$TEMP_FILE"
 else
     mv "$TEMP_FILE" "$TARGET_FILE"
     chmod +x "$TARGET_FILE"
-    echo -e "${GREEN}更新完了:${NC} $TARGET_FILE を更新しました"
+    echo -e "${GREEN}Updated:${NC} $TARGET_FILE has been updated"
 fi

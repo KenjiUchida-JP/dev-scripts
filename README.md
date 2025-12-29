@@ -1,14 +1,14 @@
 # dev-scripts
 
-開発環境のセットアップや自動化のためのスクリプト集です。
+A collection of scripts for development environment setup and automation.
 
-## 1. はじめに
+## 1. Introduction
 
-このリポジトリには、開発プロジェクトの初期セットアップを自動化するスクリプトが含まれています。
+This repository contains scripts to automate the initial setup of development projects.
 
-## 2. セットアップ
+## 2. Setup
 
-リポジトリをクローンした後、以下のコマンドを実行して Git hooks を設定してください。
+After cloning the repository, run the following command to set up Git hooks.
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/dev-scripts.git
@@ -16,59 +16,59 @@ cd dev-scripts
 ./scripts/setup-hooks.sh
 ```
 
-## 3. 含まれるスクリプト
+## 3. Included Scripts
 
-### 🐍 Python プロジェクトセットアップ
+### 🐍 Python Project Setup
 
-`uv` を使用して Python プロジェクトを自動構築します。
+Automatically builds a Python project using `uv`.
 
 ```bash
 ./python/setup-project.sh
 ```
 
-**機能:**
-- Python 環境の自動セットアップ
-- 開発ツール（ruff, mypy, pytest）の設定
-- `.gitignore` の自動生成
-- `pyproject.toml` へのツール設定追記
+**Features:**
+- Automatic Python environment setup
+- Configuration of development tools (ruff, mypy, pytest)
+- Automatic `.gitignore` generation
+- Tool configuration appended to `pyproject.toml`
 
-**前提条件:**
-- [uv](https://docs.astral.sh/uv/) がインストール済みであること
+**Prerequisites:**
+- [uv](https://docs.astral.sh/uv/) must be installed
 
-## 4. ディレクトリ構成
+## 4. Directory Structure
 
 ```
 dev-scripts/
 ├── python/
-│   ├── setup-project.sh      # Python プロジェクトセットアップ
-│   ├── build.sh              # テンプレート同期ビルド
-│   └── .gitignore.template   # .gitignore テンプレート
+│   ├── setup-project.sh      # Python project setup
+│   ├── build.sh              # Template sync build
+│   └── .gitignore.template   # .gitignore template
 ├── hooks/
-│   └── pre-commit            # Git pre-commit フック
+│   └── pre-commit            # Git pre-commit hook
 ├── scripts/
-│   └── setup-hooks.sh        # Git hooks セットアップ
+│   └── setup-hooks.sh        # Git hooks setup
 └── .github/
     └── workflows/
-        └── check-build.yml   # CI: テンプレート同期チェック
+        └── check-build.yml   # CI: Template sync check
 ```
 
-## 5. 開発者向け情報
+## 5. Developer Information
 
-### Git Hooks について
+### About Git Hooks
 
-`hooks/` ディレクトリ内のスクリプトは、`./scripts/setup-hooks.sh` を実行することで `.git/hooks/` にシンボリックリンクとして設定されます。
+Scripts in the `hooks/` directory are set up as symbolic links to `.git/hooks/` by running `./scripts/setup-hooks.sh`.
 
-**現在のフック:**
-- `pre-commit`: コミット前に `.gitignore.template` と `setup-project.sh` の同期をチェック
+**Current hooks:**
+- `pre-commit`: Checks sync between `.gitignore.template` and `setup-project.sh` before commit
 
-### テンプレートの更新
+### Updating Templates
 
-`.gitignore.template` を編集した場合、コミット時に自動で `setup-project.sh` 内のヒアドキュメントが更新されます。手動で更新する場合は以下を実行してください。
+If you edit `.gitignore.template`, the heredoc in `setup-project.sh` will be automatically updated on commit. To update manually, run the following command.
 
 ```bash
 ./python/build.sh
 ```
 
-## 6. ライセンス
+## 6. License
 
 MIT License
