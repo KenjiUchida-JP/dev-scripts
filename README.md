@@ -2,40 +2,49 @@
 
 A collection of scripts for development environment setup and automation.
 
-## 1. Introduction
+## 1. Quick Start
 
-This repository contains scripts to automate the initial setup of development projects.
-
-## 2. Setup
-
-After cloning the repository, run the following command to set up Git hooks.
+Create a new Python project instantly with a single command:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/dev-scripts.git
-cd dev-scripts
-./scripts/setup-hooks.sh
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/python/setup-project.sh)
 ```
-
-## 3. Included Scripts
-
-### 🐍 Python Project Setup
-
-Automatically builds a Python project using `uv`.
-
-```bash
-./python/setup-project.sh
-```
-
-**Features:**
-- Automatic Python environment setup
-- Configuration of development tools (ruff, mypy, pytest)
-- Automatic `.gitignore` generation
-- Tool configuration appended to `pyproject.toml`
 
 **Prerequisites:**
 - [uv](https://docs.astral.sh/uv/) must be installed
 
-## 4. Directory Structure
+  ```bash
+  # Install uv (if not already installed)
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+## 2. What It Does
+
+The setup script will interactively guide you through:
+
+- **Project name** - Enter your project name
+- **Python version** - Select Python version (auto-detects latest available)
+- **Project type** - Choose between `app` (application) or `lib` (library)
+- **Development tools** - Optionally install ruff, mypy, and pytest
+
+After completion, you'll have a fully configured Python project with:
+- Virtual environment (`.venv/`)
+- `pyproject.toml` with tool configurations
+- `.gitignore` with sensible defaults
+- `tests/` directory (if dev tools selected)
+- Initialized Git repository
+
+## 3. For Contributors
+
+If you want to contribute to this repository, clone it and set up Git hooks:
+
+```bash
+git clone https://github.com/KenjiUchida-JP/dev-scripts.git
+cd dev-scripts
+./scripts/setup-hooks.sh
+```
+
+### Directory Structure
 
 ```
 dev-scripts/
@@ -52,8 +61,6 @@ dev-scripts/
         └── check-build.yml   # CI: Template sync check
 ```
 
-## 5. Developer Information
-
 ### About Git Hooks
 
 Scripts in the `hooks/` directory are set up as symbolic links to `.git/hooks/` by running `./scripts/setup-hooks.sh`.
@@ -63,12 +70,12 @@ Scripts in the `hooks/` directory are set up as symbolic links to `.git/hooks/` 
 
 ### Updating Templates
 
-If you edit `.gitignore.template`, the heredoc in `setup-project.sh` will be automatically updated on commit. To update manually, run the following command.
+If you edit `.gitignore.template`, the heredoc in `setup-project.sh` will be automatically updated on commit. To update manually:
 
 ```bash
 ./python/build.sh
 ```
 
-## 6. License
+## 4. License
 
 MIT License
