@@ -358,12 +358,32 @@ main() {
         print_success "Appended tool configuration"
     fi
 
-    # 8. Create tests directory
+    # 8. Create src directory
+    print_step "Creating src directory..."
+    mkdir -p src
+    touch src/__init__.py
+    print_success "Created src directory"
+
+    # 9. Create tests directory with conftest.py
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
         print_step "Creating tests directory..."
         mkdir -p tests
         touch tests/__init__.py
-        print_success "Created tests directory"
+        cat > tests/conftest.py << 'CONFTEST_EOF'
+"""
+pytest configuration file
+
+Add src directory to Python path so that tests can import src modules.
+"""
+
+import sys
+from pathlib import Path
+
+# Add project root to sys.path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+CONFTEST_EOF
+        print_success "Created tests directory with conftest.py"
     fi
 
     # 9. Create .vscode/settings.json
