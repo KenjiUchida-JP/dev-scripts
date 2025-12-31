@@ -366,7 +366,17 @@ main() {
         print_success "Created tests directory"
     fi
 
-    # 9. Initialize Git
+    # 9. Create .vscode/settings.json
+    print_step "Creating .vscode/settings.json..."
+    mkdir -p .vscode
+    cat > .vscode/settings.json << VSCODE_EOF
+{
+    "python.defaultInterpreterPath": "\${workspaceFolder}/.venv/bin/python"
+}
+VSCODE_EOF
+    print_success "Created .vscode/settings.json"
+
+    # 10. Initialize Git
     print_step "Initializing Git repository..."
     git init --quiet
     print_success "Initialized Git repository"
