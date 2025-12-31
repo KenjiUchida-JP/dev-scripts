@@ -31,7 +31,9 @@ After completion, you'll have a fully configured Python project with:
 - Virtual environment (`.venv/`)
 - `pyproject.toml` with tool configurations
 - `.gitignore` with sensible defaults
-- `tests/` directory (if dev tools selected)
+- `src/` directory with `__init__.py`
+- `tests/` directory with `conftest.py` (if dev tools selected)
+- `.vscode/settings.json` with Python interpreter path
 - Initialized Git repository
 
 ## 3. For Contributors
