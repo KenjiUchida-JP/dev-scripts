@@ -7,16 +7,41 @@
 set -e
 
 # --------------------------------------------------
-# Get script directory
+# Get script directory (detect remote execution)
 # --------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/ ]] || [[ "${BASH_SOURCE[0]}" =~ ^/proc/self/fd/ ]]; then
+    # Running via curl pipe - download dependencies
+    REPO_BASE="https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main"
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf '$TEMP_DIR'" EXIT
+
+    # Download lib files
+    mkdir -p "$TEMP_DIR/scripts/lib"
+    curl -fsSL "$REPO_BASE/scripts/lib/colors.sh" -o "$TEMP_DIR/scripts/lib/colors.sh"
+    curl -fsSL "$REPO_BASE/scripts/lib/validators.sh" -o "$TEMP_DIR/scripts/lib/validators.sh"
+    curl -fsSL "$REPO_BASE/scripts/lib/gitignore-builder.sh" -o "$TEMP_DIR/scripts/lib/gitignore-builder.sh"
+
+    # Download template files
+    mkdir -p "$TEMP_DIR/templates/gitignore"
+    curl -fsSL "$REPO_BASE/templates/gitignore/base.template" -o "$TEMP_DIR/templates/gitignore/base.template"
+    curl -fsSL "$REPO_BASE/templates/gitignore/python.template" -o "$TEMP_DIR/templates/gitignore/python.template"
+    curl -fsSL "$REPO_BASE/templates/gitignore/nextjs.template" -o "$TEMP_DIR/templates/gitignore/nextjs.template"
+
+    mkdir -p "$TEMP_DIR/templates/vscode"
+    curl -fsSL "$REPO_BASE/templates/vscode/fullstack.settings.json" -o "$TEMP_DIR/templates/vscode/fullstack.settings.json"
+
+    SCRIPT_DIR="$TEMP_DIR"
+else
+    # Running locally
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 # --------------------------------------------------
 # Import shared libraries
 # --------------------------------------------------
-source "${SCRIPT_DIR}/../scripts/lib/colors.sh"
-source "${SCRIPT_DIR}/../scripts/lib/validators.sh"
-source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
+source "${SCRIPT_DIR}/scripts/lib/colors.sh"
+source "${SCRIPT_DIR}/scripts/lib/validators.sh"
+source "${SCRIPT_DIR}/scripts/lib/gitignore-builder.sh"
 
 # --------------------------------------------------
 # Custom header for Fullstack projects
@@ -85,7 +110,7 @@ main() {
 
     # 3. Generate unified .gitignore with path prefixes
     print_step "Generating .gitignore..."
-    local templates_dir="${SCRIPT_DIR}/../templates/gitignore"
+    local templates_dir="${SCRIPT_DIR}/templates/gitignore"
     if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/python.template" && -f "${templates_dir}/nextjs.template" ]]; then
         build_gitignore_fullstack "$templates_dir" "python" "nextjs" > .gitignore
         print_success "Generated unified .gitignore"
@@ -96,7 +121,7 @@ main() {
     # 4. Generate VS Code settings
     print_step "Creating .vscode/settings.json..."
     mkdir -p .vscode
-    local vscode_template="${SCRIPT_DIR}/../templates/vscode/fullstack.settings.json"
+    local vscode_template="${SCRIPT_DIR}/templates/vscode/fullstack.settings.json"
     if [[ -f "$vscode_template" ]]; then
         cp "$vscode_template" .vscode/settings.json
         print_success "Created .vscode/settings.json"

@@ -7,16 +7,40 @@
 set -e
 
 # --------------------------------------------------
-# Get script directory
+# Get script directory (detect remote execution)
 # --------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/ ]] || [[ "${BASH_SOURCE[0]}" =~ ^/proc/self/fd/ ]]; then
+    # Running via curl pipe - download dependencies
+    REPO_BASE="https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main"
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf '$TEMP_DIR'" EXIT
+
+    # Download lib files
+    mkdir -p "$TEMP_DIR/scripts/lib"
+    curl -fsSL "$REPO_BASE/scripts/lib/colors.sh" -o "$TEMP_DIR/scripts/lib/colors.sh"
+    curl -fsSL "$REPO_BASE/scripts/lib/validators.sh" -o "$TEMP_DIR/scripts/lib/validators.sh"
+    curl -fsSL "$REPO_BASE/scripts/lib/gitignore-builder.sh" -o "$TEMP_DIR/scripts/lib/gitignore-builder.sh"
+
+    # Download template files
+    mkdir -p "$TEMP_DIR/templates/gitignore"
+    curl -fsSL "$REPO_BASE/templates/gitignore/base.template" -o "$TEMP_DIR/templates/gitignore/base.template"
+    curl -fsSL "$REPO_BASE/templates/gitignore/nextjs.template" -o "$TEMP_DIR/templates/gitignore/nextjs.template"
+
+    mkdir -p "$TEMP_DIR/templates/vscode"
+    curl -fsSL "$REPO_BASE/templates/vscode/nextjs.settings.json" -o "$TEMP_DIR/templates/vscode/nextjs.settings.json"
+
+    SCRIPT_DIR="$TEMP_DIR"
+else
+    # Running locally
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 # --------------------------------------------------
 # Import shared libraries
 # --------------------------------------------------
-source "${SCRIPT_DIR}/../scripts/lib/colors.sh"
-source "${SCRIPT_DIR}/../scripts/lib/validators.sh"
-source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
+source "${SCRIPT_DIR}/scripts/lib/colors.sh"
+source "${SCRIPT_DIR}/scripts/lib/validators.sh"
+source "${SCRIPT_DIR}/scripts/lib/gitignore-builder.sh"
 
 # --------------------------------------------------
 # Custom header for Next.js projects
@@ -88,7 +112,7 @@ get_fnm_lts_version() {
 # .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
-    local templates_dir="${SCRIPT_DIR}/../templates/gitignore"
+    local templates_dir="${SCRIPT_DIR}/templates/gitignore"
 
     # Prefer new template system
     if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/nextjs.template" ]]; then
@@ -212,7 +236,7 @@ ENV_EOF
 # Generate VS Code settings
 # --------------------------------------------------
 generate_vscode_settings() {
-    local vscode_template="${SCRIPT_DIR}/../templates/vscode/nextjs.settings.json"
+    local vscode_template="${SCRIPT_DIR}/templates/vscode/nextjs.settings.json"
     if [[ -f "$vscode_template" ]]; then
         cat "$vscode_template"
     else
