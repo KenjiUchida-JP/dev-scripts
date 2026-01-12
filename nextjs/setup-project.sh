@@ -109,6 +109,22 @@ get_fnm_lts_version() {
 }
 
 # --------------------------------------------------
+# Next.js version helper functions
+# --------------------------------------------------
+
+# Get latest stable Next.js version
+get_latest_nextjs_version() {
+    local version
+    version=$(npm view next version 2>/dev/null)
+    if [[ -z "$version" ]]; then
+        # Fallback if unable to retrieve
+        echo "latest"
+    else
+        echo "$version"
+    fi
+}
+
+# --------------------------------------------------
 # .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
@@ -409,7 +425,26 @@ main() {
     fi
 
     # --------------------------------------------------
-    # 3. Project name input
+    # 3. Next.js version input
+    # --------------------------------------------------
+    print_step "Checking latest stable Next.js version..."
+    DEFAULT_NEXTJS_VERSION=$(get_latest_nextjs_version)
+    print_success "Latest version: $DEFAULT_NEXTJS_VERSION"
+
+    while true; do
+        echo -ne "${CYAN}⚡ Next.js version [${DEFAULT_NEXTJS_VERSION}]: ${NC}"
+        read -r NEXTJS_VERSION
+        NEXTJS_VERSION="${NEXTJS_VERSION:-$DEFAULT_NEXTJS_VERSION}"
+        # Accept any non-empty string (version number or "latest")
+        if [[ -n "$NEXTJS_VERSION" ]]; then
+            break
+        else
+            print_error "Version cannot be empty"
+        fi
+    done
+
+    # --------------------------------------------------
+    # 4. Project name input
     # --------------------------------------------------
     while true; do
         echo -ne "${CYAN}📦 Project name: ${NC}"
@@ -422,7 +457,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 4. Setup mode selection (new or existing directory)
+    # 5. Setup mode selection (new or existing directory)
     # --------------------------------------------------
     echo -e "${CYAN}📂 Select setup mode:${NC}"
     echo "  1) new      - Create new directory"
@@ -460,7 +495,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 5. Package manager selection
+    # 6. Package manager selection
     # --------------------------------------------------
     echo -e "${CYAN}📦 Select package manager:${NC}"
     echo "  1) npm"
@@ -507,7 +542,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 6. Install Prettier
+    # 7. Install Prettier
     # --------------------------------------------------
     echo -ne "${CYAN}🎨 Install Prettier [Y/n]: ${NC}"
     read -r INSTALL_PRETTIER
@@ -521,6 +556,7 @@ main() {
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Project name: $PROJECT_NAME"
     echo "  Node.js version: $SELECTED_NODE_VERSION"
+    echo "  Next.js version: $NEXTJS_VERSION"
     echo "  Setup mode: $SETUP_MODE"
     echo "  Package manager: $PKG_MANAGER"
     echo "  TypeScript: Yes (recommended)"
@@ -556,9 +592,17 @@ main() {
     # 1. Create Next.js project
     print_step "Creating Next.js project with recommended settings..."
 
+    # Determine create-next-app version to use
+    if [[ "$NEXTJS_VERSION" == "latest" ]]; then
+        CNA_VERSION="latest"
+    else
+        # Use specific Next.js version with corresponding create-next-app
+        CNA_VERSION="$NEXTJS_VERSION"
+    fi
+
     if [[ "$SETUP_MODE" == "existing" ]]; then
         cd "$PROJECT_NAME"
-        npx create-next-app@latest . \
+        npx create-next-app@${CNA_VERSION} . \
             --typescript \
             --eslint \
             --tailwind \
@@ -568,7 +612,7 @@ main() {
             $PKG_FLAG
         cd ..
     else
-        npx create-next-app@latest "$PROJECT_NAME" \
+        npx create-next-app@${CNA_VERSION} "$PROJECT_NAME" \
             --typescript \
             --eslint \
             --tailwind \
@@ -578,7 +622,7 @@ main() {
             $PKG_FLAG
     fi
 
-    print_success "Created Next.js project"
+    print_success "Created Next.js project (Next.js ${NEXTJS_VERSION})"
 
     cd "$PROJECT_NAME"
 
