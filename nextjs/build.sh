@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-# Python Build Script
+# Next.js Build Script
 # Validates that setup-project.sh uses templates correctly
 # ==================================================
 
@@ -22,8 +22,8 @@ if [[ ! -f "${TEMPLATES_DIR}/base.template" ]]; then
     exit 1
 fi
 
-if [[ ! -f "${TEMPLATES_DIR}/python.template" ]]; then
-    echo -e "${RED}Error:${NC} python.template not found" >&2
+if [[ ! -f "${TEMPLATES_DIR}/nextjs.template" ]]; then
+    echo -e "${RED}Error:${NC} nextjs.template not found" >&2
     exit 1
 fi
 
@@ -34,9 +34,9 @@ if [[ ! -f "$SETUP_SCRIPT" ]]; then
 fi
 
 # Verify that setup script uses new template system
-if ! grep -q 'build_gitignore_single.*"python"' "$SETUP_SCRIPT"; then
+if ! grep -q 'build_gitignore_single.*"nextjs"' "$SETUP_SCRIPT"; then
     echo -e "${YELLOW}Warning:${NC} setup-project.sh may not be using new template system" >&2
 fi
 
-echo -e "${GREEN}✓${NC} Python templates are valid"
+echo -e "${GREEN}✓${NC} Next.js templates are valid"
 echo -e "${GREEN}✓${NC} setup-project.sh is up to date"
