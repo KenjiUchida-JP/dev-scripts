@@ -26,7 +26,7 @@ Create a new Next.js project:
 bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/nextjs/setup-project.sh)
 ```
 
-**Prerequisites:** [Node.js](https://nodejs.org/) (via [nvm](https://github.com/nvm-sh/nvm) or [mise](https://github.com/jdx/mise) recommended)
+**Prerequisites:** [Node.js](https://nodejs.org/) (via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm) recommended)
 
 ### Fullstack Project (Python + Next.js)
 
