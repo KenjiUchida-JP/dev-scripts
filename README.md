@@ -1,5 +1,7 @@
 # dev-scripts
 
+🇺🇸 English | [🇯🇵 日本語](./README.ja.md)
+
 A collection of scripts for development environment setup and automation.
 
 ## 1. Quick Start

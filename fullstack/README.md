@@ -1,5 +1,7 @@
 # Fullstack Project Setup
 
+🇺🇸 English | [🇯🇵 日本語](./README.ja.md)
+
 Automatic setup script for fullstack projects combining Python (backend) and Next.js (frontend).
 
 ## Features
