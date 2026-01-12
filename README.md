@@ -4,30 +4,45 @@ A collection of scripts for development environment setup and automation.
 
 ## 1. Quick Start
 
-Create a new Python project instantly with a single command:
+### Python Project
+
+Create a new Python project instantly:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/python/setup-project.sh)
 ```
 
-**Prerequisites:**
-- [uv](https://docs.astral.sh/uv/) must be installed
+**Prerequisites:** [uv](https://docs.astral.sh/uv/)
 
-  ```bash
-  # Install uv (if not already installed)
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Next.js Project
+
+Create a new Next.js project:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/nextjs/setup-project.sh)
+```
+
+**Prerequisites:** [Node.js](https://nodejs.org/) (via [nvm](https://github.com/nvm-sh/nvm) or [mise](https://github.com/jdx/mise) recommended)
+
+### Fullstack Project (Python + Next.js)
+
+Create a fullstack project with both backend and frontend:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/fullstack/setup-project.sh)
+```
+
+**Prerequisites:** Both `uv` and Node.js
 
 ## 2. What It Does
 
-The setup script will interactively guide you through:
+### Python Project
 
-- **Project name** - Enter your project name
-- **Python version** - Select Python version (auto-detects latest available)
-- **Project type** - Choose between `app` (application) or `lib` (library)
-- **Development tools** - Optionally install ruff, mypy, and pytest
-
-After completion, you'll have a fully configured Python project with:
+- Interactive setup for project name, Python version, and type (app/lib)
 - Virtual environment (`.venv/`)
 - `pyproject.toml` with tool configurations
 - `.gitignore` with sensible defaults
@@ -35,6 +50,22 @@ After completion, you'll have a fully configured Python project with:
 - `tests/` directory with `conftest.py` (if dev tools selected)
 - `.vscode/settings.json` with Python interpreter path
 - Initialized Git repository
+
+### Next.js Project
+
+- Interactive setup for project name and Node.js version
+- Next.js project with TypeScript
+- `.gitignore` with sensible defaults
+- `.vscode/settings.json` with Prettier and ESLint settings
+- Node version files (`.nvmrc`, `.node-version`)
+- Initialized Git repository
+
+### Fullstack Project
+
+- Monorepo structure with `frontend/` and `backend/` directories
+- Combined `.gitignore` with path prefixes
+- Merged `.vscode/settings.json` for both languages
+- Both Python and Node.js development environments
 
 ## 3. For Contributors
 
@@ -50,17 +81,34 @@ cd dev-scripts
 
 ```
 dev-scripts/
+├── templates/                # Centralized template storage
+│   ├── gitignore/           # Modular .gitignore templates
+│   │   ├── base.template    # Common (IDE, OS, env vars)
+│   │   ├── python.template  # Python-specific
+│   │   └── nextjs.template  # Next.js-specific
+│   └── vscode/              # VS Code settings templates
+│       ├── python.settings.json
+│       ├── nextjs.settings.json
+│       └── fullstack.settings.json
 ├── python/
-│   ├── setup-project.sh      # Python project setup
-│   ├── build.sh              # Template sync build
-│   └── .gitignore.template   # .gitignore template
-├── hooks/
-│   └── pre-commit            # Git pre-commit hook
+│   ├── setup-project.sh     # Python project setup
+│   └── build.sh             # Template sync build
+├── nextjs/
+│   ├── setup-project.sh     # Next.js project setup
+│   └── build.sh             # Template sync build
+├── fullstack/
+│   └── setup-project.sh     # Fullstack project setup
 ├── scripts/
-│   └── setup-hooks.sh        # Git hooks setup
+│   ├── setup-hooks.sh       # Git hooks installer
+│   └── lib/                 # Shared library functions
+│       ├── colors.sh        # Color output helpers
+│       ├── validators.sh    # Input validation
+│       └── gitignore-builder.sh  # Template composition
+├── hooks/
+│   └── pre-commit           # Git pre-commit hook
 └── .github/
     └── workflows/
-        └── check-build.yml   # CI: Template sync check
+        └── check-build.yml  # CI: Template sync check
 ```
 
 ### About Git Hooks
@@ -68,14 +116,15 @@ dev-scripts/
 Scripts in the `hooks/` directory are set up as symbolic links to `.git/hooks/` by running `./scripts/setup-hooks.sh`.
 
 **Current hooks:**
-- `pre-commit`: Checks sync between `.gitignore.template` and `setup-project.sh` before commit
+- `pre-commit`: Syncs all templates before commit
 
 ### Updating Templates
 
-If you edit `.gitignore.template`, the heredoc in `setup-project.sh` will be automatically updated on commit. To update manually:
+If you edit templates in `templates/`, the setup scripts will be automatically updated on commit. To update manually:
 
 ```bash
 ./python/build.sh
+./nextjs/build.sh
 ```
 
 ## 4. License
