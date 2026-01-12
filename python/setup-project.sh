@@ -240,14 +240,46 @@ main() {
         fi
     done
 
-    # Check for existing directory
-    if [[ -d "$PROJECT_NAME" ]]; then
-        print_error "Directory '$PROJECT_NAME' already exists."
-        exit 1
-    fi
+    # --------------------------------------------------
+    # 2. Setup mode selection (new or existing directory)
+    # --------------------------------------------------
+    echo -e "${CYAN}📂 Select setup mode:${NC}"
+    echo "  1) new      - Create new directory"
+    echo "  2) existing - Use existing directory (must be empty)"
+    while true; do
+        echo -ne "${CYAN}Selection [1]: ${NC}"
+        read -r SETUP_MODE_CHOICE
+        SETUP_MODE_CHOICE="${SETUP_MODE_CHOICE:-1}"
+        case "$SETUP_MODE_CHOICE" in
+            1|new)
+                SETUP_MODE="new"
+                if [[ -d "$PROJECT_NAME" ]]; then
+                    print_error "Directory '$PROJECT_NAME' already exists."
+                    exit 1
+                fi
+                break
+                ;;
+            2|existing)
+                SETUP_MODE="existing"
+                if [[ ! -d "$PROJECT_NAME" ]]; then
+                    print_error "Directory '$PROJECT_NAME' does not exist."
+                    exit 1
+                fi
+                # Check if directory is empty
+                if [[ -n "$(ls -A "$PROJECT_NAME" 2>/dev/null)" ]]; then
+                    print_error "Directory '$PROJECT_NAME' is not empty. Aborting to prevent accidents."
+                    exit 1
+                fi
+                break
+                ;;
+            *)
+                print_error "Please enter 1 or 2."
+                ;;
+        esac
+    done
 
     # --------------------------------------------------
-    # 2. Python version input
+    # 3. Python version input
     # --------------------------------------------------
     print_step "Checking latest available Python version..."
     DEFAULT_PYTHON_VERSION=$(get_latest_python_version)
@@ -265,7 +297,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 3. Project type selection
+    # 4. Project type selection
     # --------------------------------------------------
     echo -e "${CYAN}📁 Select project type:${NC}"
     echo "  1) app - Application"
@@ -290,7 +322,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 4. Development tools confirmation
+    # 5. Development tools confirmation
     # --------------------------------------------------
     echo -ne "${CYAN}🛠️  Install development tools (ruff, mypy, pytest) [Y/n]: ${NC}"
     read -r INSTALL_DEV_TOOLS
@@ -303,6 +335,7 @@ main() {
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Project name: $PROJECT_NAME"
+    echo "  Setup mode: $SETUP_MODE"
     echo "  Python version: $PYTHON_VERSION"
     echo "  Project type: $PROJECT_TYPE"
     echo "  Development tools: $([[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install" || echo "Skip")"
@@ -314,11 +347,16 @@ main() {
     # --------------------------------------------------
     echo -e "${GREEN}✨ Starting setup...${NC}\n"
 
-    # 1. Create directory
-    print_step "Creating directory..."
-    mkdir -p "$PROJECT_NAME"
+    # 1. Create or use directory
+    if [[ "$SETUP_MODE" == "new" ]]; then
+        print_step "Creating directory..."
+        mkdir -p "$PROJECT_NAME"
+        print_success "Created directory '$PROJECT_NAME'"
+    else
+        print_step "Using existing directory..."
+        print_success "Using existing directory '$PROJECT_NAME'"
+    fi
     cd "$PROJECT_NAME"
-    print_success "Created directory '$PROJECT_NAME'"
 
     # 2. Install Python
     print_step "Installing Python $PYTHON_VERSION..."
