@@ -7,37 +7,23 @@
 set -e
 
 # --------------------------------------------------
-# Color definitions
+# Get script directory
 # --------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --------------------------------------------------
-# Helper functions
+# Import shared libraries
 # --------------------------------------------------
-print_header() {
+source "${SCRIPT_DIR}/../scripts/lib/colors.sh"
+source "${SCRIPT_DIR}/../scripts/lib/validators.sh"
+source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
+
+# --------------------------------------------------
+# Custom header for Python projects
+# --------------------------------------------------
+print_python_header() {
     echo -e "\n${CYAN}🐍 Python Project Setup${NC}"
     echo "=================================================="
-}
-
-print_step() {
-    echo -e "${BLUE}➜${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}✗${NC} $1" >&2
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
 }
 
 # Convert version string to pyXXX format (e.g., 3.14.2 → py314)
@@ -55,27 +41,9 @@ get_major_minor() {
     echo "$version" | cut -d. -f1,2
 }
 
-# Version format validation
+# Version format validation (alias for library function)
 validate_version() {
-    local version="$1"
-    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-        return 1
-    fi
-    return 0
-}
-
-# Project name validation
-validate_project_name() {
-    local name="$1"
-    # Empty string check
-    if [[ -z "$name" ]]; then
-        return 1
-    fi
-    # Valid characters only (alphanumeric, hyphen, underscore)
-    if [[ ! "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]; then
-        return 1
-    fi
-    return 0
+    validate_python_version "$1"
 }
 
 # Get latest Python version
@@ -91,24 +59,51 @@ get_latest_python_version() {
 }
 
 # --------------------------------------------------
-# Get script directory
-# --------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# --- BEGIN GITIGNORE_FUNC ---
-# --------------------------------------------------
 # .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
-    local template_file="${SCRIPT_DIR}/.gitignore.template"
-    if [[ -f "$template_file" ]]; then
-        cat "$template_file"
+    local templates_dir="${SCRIPT_DIR}/../templates/gitignore"
+
+    # Prefer new template system
+    if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/python.template" ]]; then
+        build_gitignore_single "$templates_dir" "python"
+    # Fallback to old location (backward compatibility)
+    elif [[ -f "${SCRIPT_DIR}/.gitignore.template" ]]; then
+        cat "${SCRIPT_DIR}/.gitignore.template"
     else
-        # Fallback for curl execution (auto-generated: build.sh)
+        # Last resort: heredoc for curl usage
         cat << 'GITIGNORE_EOF'
 # ==================================================
-# Python Project .gitignore Template
+# Python .gitignore
 # ==================================================
+
+# --------------------------------------------------
+# Environment Variables / Secrets
+# --------------------------------------------------
+.env
+.env.local
+.env.*.local
+.env.prod
+.env.dev
+.env.test
+*.pem
+
+# --------------------------------------------------
+# IDE / Editor
+# --------------------------------------------------
+.idea/
+.cursor/
+.claude/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --------------------------------------------------
+# OS Generated
+# --------------------------------------------------
+.DS_Store
+Thumbs.db
 
 # --------------------------------------------------
 # Byte-compiled / Optimized / DLL files
@@ -154,34 +149,6 @@ htmlcov/
 .pytype/
 
 # --------------------------------------------------
-# Environment Variables / Secrets
-# --------------------------------------------------
-.env
-.env.local
-.env.*.local
-.env.prod
-.env.dev
-.env.test
-*.pem
-
-# --------------------------------------------------
-# IDE / Editor
-# --------------------------------------------------
-.idea/
-.cursor/
-.claude/
-.vscode/
-*.swp
-*.swo
-*~
-
-# --------------------------------------------------
-# OS Generated
-# --------------------------------------------------
-.DS_Store
-Thumbs.db
-
-# --------------------------------------------------
 # Project Specific
 # --------------------------------------------------
 docs/
@@ -189,7 +156,6 @@ tmp/
 GITIGNORE_EOF
     fi
 }
-# --- END GITIGNORE_FUNC ---
 
 # --------------------------------------------------
 # Append tool configuration to pyproject.toml
@@ -225,7 +191,7 @@ TOML_EOF
 # Main process
 # --------------------------------------------------
 main() {
-    print_header
+    print_python_header
 
     # --------------------------------------------------
     # 1. Project name input
@@ -427,11 +393,17 @@ CONFTEST_EOF
     # 9. Create .vscode/settings.json
     print_step "Creating .vscode/settings.json..."
     mkdir -p .vscode
-    cat > .vscode/settings.json << VSCODE_EOF
+    local vscode_template="${SCRIPT_DIR}/../templates/vscode/python.settings.json"
+    if [[ -f "$vscode_template" ]]; then
+        cp "$vscode_template" .vscode/settings.json
+    else
+        # Fallback to inline template
+        cat > .vscode/settings.json << VSCODE_EOF
 {
     "python.defaultInterpreterPath": "\${workspaceFolder}/.venv/bin/python"
 }
 VSCODE_EOF
+    fi
     print_success "Created .vscode/settings.json"
 
     # 10. Initialize Git
