@@ -233,13 +233,13 @@ TOML_EOF
     print_step "Creating Next.js project..."
     case "$pkg_manager" in
         pnpm)
-            pnpm create next-app@latest . --typescript --eslint --tailwind --app --no-src-dir --import-alias "@/*"
+            pnpm create next-app@latest . --typescript --eslint --tailwind --app --import-alias "@/*"
             ;;
         yarn)
-            yarn create next-app . --typescript --eslint --tailwind --app --no-src-dir --import-alias "@/*"
+            yarn create next-app . --typescript --eslint --tailwind --app --import-alias "@/*"
             ;;
         *)
-            npx create-next-app@latest . --typescript --eslint --tailwind --app --no-src-dir --import-alias "@/*"
+            npx create-next-app@latest . --typescript --eslint --tailwind --app --import-alias "@/*"
             ;;
     esac
     print_success "Created Next.js project"
@@ -256,26 +256,6 @@ TOML_EOF
 }
 PRETTIER_EOF
     print_success "Created .prettierrc"
-
-    # Create .env.example
-    print_step "Creating .env.example..."
-    cat > .env.example << 'ENV_EOF'
-# --------------------------------------------------
-# Public Environment Variables (Exposed to Browser)
-# --------------------------------------------------
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# --------------------------------------------------
-# Server-side Environment Variables
-# --------------------------------------------------
-# Database
-# DATABASE_URL=
-
-# Authentication
-# NEXTAUTH_SECRET=
-# NEXTAUTH_URL=http://localhost:3000
-ENV_EOF
-    print_success "Created .env.example"
 
     cd ..
     print_success "Frontend setup complete"

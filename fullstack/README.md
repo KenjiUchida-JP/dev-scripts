@@ -13,11 +13,12 @@ Automatic setup script for fullstack projects combining Python (backend) and Nex
   - VS Code integration with proper Python path
 
 - **Next.js Frontend**
-  - Latest Next.js with TypeScript
+  - Latest Next.js with TypeScript and `src/` directory
   - Tailwind CSS for styling
   - ESLint for code quality
   - Prettier for consistent formatting
   - Automatic package manager detection (npm, pnpm, or yarn)
+  - No pre-configured `.env` files (create as needed)
 
 - **Unified Configuration**
   - Single `.gitignore` with path prefixes for both backend and frontend
@@ -98,10 +99,10 @@ my-awesome-app/
     ├── package.json
     ├── tsconfig.json
     ├── .prettierrc
-    ├── .env.example
-    ├── app/
-    │   ├── page.tsx
-    │   └── layout.tsx
+    ├── src/
+    │   └── app/
+    │       ├── page.tsx
+    │       └── layout.tsx
     └── public/
 ```
 
@@ -215,7 +216,7 @@ API will be available at http://localhost:8000
    NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
 
-2. Create API client in `frontend/app/lib/api.ts`:
+2. Create API client in `frontend/src/lib/api.ts`:
    ```typescript
    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 

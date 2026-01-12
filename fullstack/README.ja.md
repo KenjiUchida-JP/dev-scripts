@@ -13,11 +13,12 @@ Python（バックエンド）と Next.js（フロントエンド）を組み合
   - 適切な Python パスで VS Code と統合
 
 - **Next.js フロントエンド**
-  - TypeScript を使用した最新の Next.js
+  - TypeScript と `src/` ディレクトリを使用した最新の Next.js
   - スタイリング用の Tailwind CSS
   - コード品質のための ESLint
   - 一貫したフォーマットのための Prettier
   - 自動パッケージマネージャー検出（npm、pnpm、または yarn）
+  - `.env` ファイルは事前設定なし（必要に応じて作成してください）
 
 - **統合設定**
   - バックエンドとフロントエンドの両方にパスプレフィックスを持つ単一の `.gitignore`
@@ -98,10 +99,10 @@ my-awesome-app/
     ├── package.json
     ├── tsconfig.json
     ├── .prettierrc
-    ├── .env.example
-    ├── app/
-    │   ├── page.tsx
-    │   └── layout.tsx
+    ├── src/
+    │   └── app/
+    │       ├── page.tsx
+    │       └── layout.tsx
     └── public/
 ```
 
@@ -215,7 +216,7 @@ API は http://localhost:8000 で利用可能になります
    NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
 
-2. `frontend/app/lib/api.ts` に API クライアントを作成：
+2. `frontend/src/lib/api.ts` に API クライアントを作成：
    ```typescript
    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 

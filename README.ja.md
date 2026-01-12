@@ -56,7 +56,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 ### Next.js プロジェクト
 
 - プロジェクト名とNode.jsバージョンの対話的セットアップ
-- TypeScript を使用した Next.js プロジェクト
+- TypeScript と `src/` ディレクトリを使用した Next.js プロジェクト
 - 適切なデフォルト設定の `.gitignore`
 - Prettier と ESLint 設定を含む `.vscode/settings.json`
 - Node バージョンファイル（`.nvmrc`、`.node-version`）
@@ -68,6 +68,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 - パスプレフィックスを持つ統合された `.gitignore`
 - 両言語用にマージされた `.vscode/settings.json`
 - Python と Node.js の両方の開発環境
+- `src/` ディレクトリ構造を持つフロントエンド
+- `.env` ファイルは事前設定なし（プロジェクトに応じて作成してください）
 
 ## 3. コントリビューター向け
 
