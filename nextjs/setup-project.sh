@@ -7,51 +7,23 @@
 set -e
 
 # --------------------------------------------------
-# Color definitions
+# Get script directory
 # --------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --------------------------------------------------
-# Helper functions
+# Import shared libraries
 # --------------------------------------------------
-print_header() {
+source "${SCRIPT_DIR}/../scripts/lib/colors.sh"
+source "${SCRIPT_DIR}/../scripts/lib/validators.sh"
+source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
+
+# --------------------------------------------------
+# Custom header for Next.js projects
+# --------------------------------------------------
+print_nextjs_header() {
     echo -e "\n${CYAN}⚡ Next.js Project Setup${NC}"
     echo "=================================================="
-}
-
-print_step() {
-    echo -e "${BLUE}➜${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}✗${NC} $1" >&2
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
-# Project name validation
-validate_project_name() {
-    local name="$1"
-    # Empty string check
-    if [[ -z "$name" ]]; then
-        return 1
-    fi
-    # Valid characters only (alphanumeric, hyphen, underscore)
-    if [[ ! "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]; then
-        return 1
-    fi
-    return 0
 }
 
 # Check if command exists
@@ -113,19 +85,19 @@ get_fnm_lts_version() {
 }
 
 # --------------------------------------------------
-# Get script directory
-# --------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# --------------------------------------------------
 # .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
-    local template_file="${SCRIPT_DIR}/.gitignore.template"
-    if [[ -f "$template_file" ]]; then
-        cat "$template_file"
+    local templates_dir="${SCRIPT_DIR}/../templates/gitignore"
+
+    # Prefer new template system
+    if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/nextjs.template" ]]; then
+        build_gitignore_single "$templates_dir" "nextjs"
+    # Fallback to old location (backward compatibility)
+    elif [[ -f "${SCRIPT_DIR}/.gitignore.template" ]]; then
+        cat "${SCRIPT_DIR}/.gitignore.template"
     else
-        # Fallback for curl execution
+        # Last resort: heredoc for curl usage
         cat << 'GITIGNORE_EOF'
 # ==================================================
 # Next.js Project .gitignore Template
@@ -240,7 +212,12 @@ ENV_EOF
 # Generate VS Code settings
 # --------------------------------------------------
 generate_vscode_settings() {
-    cat << 'VSCODE_EOF'
+    local vscode_template="${SCRIPT_DIR}/../templates/vscode/nextjs.settings.json"
+    if [[ -f "$vscode_template" ]]; then
+        cat "$vscode_template"
+    else
+        # Fallback to inline template
+        cat << 'VSCODE_EOF'
 {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -265,6 +242,7 @@ generate_vscode_settings() {
     "typescript.tsdk": "node_modules/typescript/lib"
 }
 VSCODE_EOF
+    fi
 }
 
 # --------------------------------------------------
@@ -286,7 +264,7 @@ PRETTIER_EOF
 # Main process
 # --------------------------------------------------
 main() {
-    print_header
+    print_nextjs_header
 
     # --------------------------------------------------
     # 1. Check prerequisites and version managers
