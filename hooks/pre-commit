@@ -1,32 +1,47 @@
 #!/usr/bin/env bash
 # ==================================================
 # Pre-commit Hook
-# Runs build.sh to sync templates before commit
+# Validates template system before commit
 # ==================================================
 
 set -e
 
 # Get the repository root directory
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-BUILD_SCRIPT="${REPO_ROOT}/python/build.sh"
 
-# Check if build.sh exists
-if [[ ! -f "$BUILD_SCRIPT" ]]; then
-    echo "Warning: build.sh not found: $BUILD_SCRIPT"
+# List of build scripts to run
+BUILD_SCRIPTS=(
+    "${REPO_ROOT}/python/build.sh"
+    "${REPO_ROOT}/nextjs/build.sh"
+)
+
+# Check if any templates or related files are being committed
+CHANGED_FILES=$(git diff --cached --name-only)
+if ! echo "$CHANGED_FILES" | grep -qE '^(templates/|python/|nextjs/|fullstack/|scripts/lib/)'; then
+    # No template-related files changed, skip validation
     exit 0
 fi
 
-# Run build.sh
-echo "🔧 Syncing templates..."
-"$BUILD_SCRIPT"
+echo "🔍 Validating template system..."
 
-# Auto-stage setup-project.sh if it has changes
-SETUP_SCRIPT="${REPO_ROOT}/python/setup-project.sh"
-if [[ -f "$SETUP_SCRIPT" ]]; then
-    if ! git diff --quiet "$SETUP_SCRIPT" 2>/dev/null; then
-        echo "📝 Adding setup-project.sh to staging"
-        git add "$SETUP_SCRIPT"
+# Run all build scripts for validation
+VALIDATION_FAILED=0
+for BUILD_SCRIPT in "${BUILD_SCRIPTS[@]}"; do
+    if [[ -f "$BUILD_SCRIPT" ]]; then
+        echo "  Validating: $(basename $(dirname "$BUILD_SCRIPT"))"
+        if ! "$BUILD_SCRIPT"; then
+            VALIDATION_FAILED=1
+        fi
+    else
+        echo "  ⚠️  Warning: build.sh not found: $BUILD_SCRIPT"
     fi
+done
+
+if [[ $VALIDATION_FAILED -eq 1 ]]; then
+    echo ""
+    echo "❌ Template validation failed!"
+    echo "   Please fix the errors above before committing."
+    exit 1
 fi
 
-echo "✅ Sync complete"
+echo "✅ Template validation passed"
