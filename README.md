@@ -55,7 +55,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 
 ### Next.js Project
 
-- Interactive setup for project name and Node.js version
+- Interactive setup for project name, Node.js version, and Next.js version
 - Next.js project with TypeScript and `src/` directory
 - `.gitignore` with sensible defaults
 - `.vscode/settings.json` with Prettier and ESLint settings
@@ -67,6 +67,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 - Monorepo structure with `frontend/` and `backend/` directories
 - Combined `.gitignore` with path prefixes
 - Merged `.vscode/settings.json` for both languages
+- Interactive setup for Python version, Node.js version, and Next.js version
 - Both Python and Node.js development environments
 - Frontend with `src/` directory structure
 - No pre-configured `.env` files (create as needed for your project)

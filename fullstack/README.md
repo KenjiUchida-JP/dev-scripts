@@ -13,11 +13,12 @@ Automatic setup script for fullstack projects combining Python (backend) and Nex
   - VS Code integration with proper Python path
 
 - **Next.js Frontend**
-  - Latest Next.js with TypeScript and `src/` directory
+  - Configurable Next.js version (latest stable or custom version)
+  - TypeScript and `src/` directory
   - Tailwind CSS for styling
   - ESLint for code quality
   - Prettier for consistent formatting
-  - Automatic package manager detection (npm, pnpm, or yarn)
+  - Automatic package manager detection (npm, pnpm, yarn, or bun)
   - No pre-configured `.env` files (create as needed)
 
 - **Unified Configuration**

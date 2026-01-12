@@ -13,11 +13,12 @@ Python（バックエンド）と Next.js（フロントエンド）を組み合
   - 適切な Python パスで VS Code と統合
 
 - **Next.js フロントエンド**
-  - TypeScript と `src/` ディレクトリを使用した最新の Next.js
+  - 設定可能な Next.js バージョン（最新安定版またはカスタムバージョン）
+  - TypeScript と `src/` ディレクトリ
   - スタイリング用の Tailwind CSS
   - コード品質のための ESLint
   - 一貫したフォーマットのための Prettier
-  - 自動パッケージマネージャー検出（npm、pnpm、または yarn）
+  - 自動パッケージマネージャー検出（npm、pnpm、yarn、または bun）
   - `.env` ファイルは事前設定なし（必要に応じて作成してください）
 
 - **統合設定**
