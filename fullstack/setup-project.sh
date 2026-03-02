@@ -73,7 +73,7 @@ get_major_minor() {
 # Get latest Python version
 get_latest_python_version() {
     local version
-    version=$(uv python list 2>/dev/null | grep -E "^cpython-[0-9]+\.[0-9]+\.[0-9]+-" | grep -v "freethreaded" | head -1 | sed 's/cpython-\([0-9.]*\)-.*/\1/')
+    version=$(uv python list --only-downloads 2>/dev/null | grep -E "^cpython-[0-9]+\.[0-9]+\.[0-9]+-" | grep -v "freethreaded" | head -1 | sed 's/cpython-\([0-9.]*\)-.*/\1/')
     if [[ -z "$version" ]]; then
         # Fallback: use 3.13 if unable to retrieve
         echo "3.13"
