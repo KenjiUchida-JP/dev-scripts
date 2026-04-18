@@ -135,22 +135,7 @@ main() {
     fi
 
     # --------------------------------------------------
-    # 2. Project name input (defaults to current directory name)
-    # --------------------------------------------------
-    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
-    while true; do
-        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
-        read -r PROJECT_NAME
-        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
-        if validate_project_name "$PROJECT_NAME"; then
-            break
-        else
-            print_error "Invalid project name. Must start with a letter and contain only alphanumeric characters, hyphens, or underscores."
-        fi
-    done
-
-    # --------------------------------------------------
-    # 3. Python version input
+    # 2. Python version input
     # --------------------------------------------------
     print_step "Checking latest available Python version..."
     DEFAULT_PYTHON_VERSION=$(get_latest_python_version)
@@ -168,7 +153,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 4. Project type selection
+    # 3. Project type selection
     # --------------------------------------------------
     echo -e "${CYAN}📁 Select project type:${NC}"
     echo "  1) app - Application"
@@ -193,7 +178,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 5. Development tools confirmation
+    # 4. Development tools confirmation
     # --------------------------------------------------
     echo -ne "${CYAN}🛠️  Install development tools (ruff, mypy, pytest) [Y/n]: ${NC}"
     read -r INSTALL_DEV_TOOLS
@@ -205,7 +190,6 @@ main() {
     echo ""
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
-    echo "  Project name: $PROJECT_NAME"
     echo "  Working directory: $(pwd)"
     echo "  Python version: $PYTHON_VERSION"
     echo "  Project type: $PROJECT_TYPE"
@@ -235,9 +219,9 @@ main() {
     uv python install "$PYTHON_VERSION"
     print_success "Installed Python $PYTHON_VERSION"
 
-    # 2. Initialize project (in current directory)
+    # 2. Initialize project (in current directory; project name auto-derived from dir)
     print_step "Initializing project..."
-    local uv_init_args=(--name "$PROJECT_NAME" --python "$PYTHON_VERSION" "--$PROJECT_TYPE")
+    local uv_init_args=(--python "$PYTHON_VERSION" "--$PROJECT_TYPE")
     [[ $has_existing_readme -eq 1 ]] && uv_init_args+=(--no-readme)
 
     # Backup .gitignore in case `uv init` regenerates it

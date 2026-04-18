@@ -215,22 +215,7 @@ main() {
     fi
 
     # --------------------------------------------------
-    # 2. Project name input (defaults to current directory name)
-    # --------------------------------------------------
-    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
-    while true; do
-        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
-        read -r PROJECT_NAME
-        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
-        if validate_project_name "$PROJECT_NAME"; then
-            break
-        else
-            print_error "Invalid project name. Must start with a letter and contain only alphanumeric characters, hyphens, or underscores."
-        fi
-    done
-
-    # --------------------------------------------------
-    # 3. Python version input
+    # 2. Python version input
     # --------------------------------------------------
     print_step "Checking latest available Python version..."
     DEFAULT_PYTHON_VERSION=$(get_latest_python_version)
@@ -476,7 +461,6 @@ main() {
     echo ""
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
-    echo "  Project name: $PROJECT_NAME"
     echo "  Working directory: $(pwd)"
     echo "  Stack: Python (backend) + Next.js (frontend)"
     echo "  Structure:"
@@ -565,9 +549,9 @@ main() {
     uv python install "$PYTHON_VERSION"
     print_success "Installed Python $PYTHON_VERSION"
 
-    # Initialize Python project
+    # Initialize Python project (name auto-derived as "backend" from current dir)
     print_step "Initializing Python project..."
-    uv init --name "${PROJECT_NAME}-backend" --python "$PYTHON_VERSION" --"$PROJECT_TYPE"
+    uv init --python "$PYTHON_VERSION" --"$PROJECT_TYPE"
     print_success "Initialized Python project"
 
     # Install development tools

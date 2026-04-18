@@ -2,20 +2,6 @@
 # Input validation and environment collision detection
 
 # --------------------------------------------------
-# Project name validation
-# --------------------------------------------------
-validate_project_name() {
-    local name="$1"
-    if [[ -z "$name" ]]; then
-        return 1
-    fi
-    if [[ ! "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]; then
-        return 1
-    fi
-    return 0
-}
-
-# --------------------------------------------------
 # Python version format validation
 # --------------------------------------------------
 validate_python_version() {
