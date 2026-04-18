@@ -46,7 +46,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 ### Execution model
 
 - The script always operates on the **current working directory**.
-- The project name defaults to the current directory's basename — you can override it interactively.
+- The project name is auto-derived from the directory name by `uv init` and `create-next-app` — there is no project-name prompt.
 - The script aborts immediately when fatal collisions are detected (e.g. existing `.venv/`, `pyproject.toml`, `node_modules/`, `package.json`).
 - Files that the script normally generates are **preserved when they already exist**:
   - `README.md`
