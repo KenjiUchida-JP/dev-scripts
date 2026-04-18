@@ -335,22 +335,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 4. Project name input (defaults to current directory name)
-    # --------------------------------------------------
-    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
-    while true; do
-        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
-        read -r PROJECT_NAME
-        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
-        if validate_project_name "$PROJECT_NAME"; then
-            break
-        else
-            print_error "Invalid project name. Must start with a letter and contain only alphanumeric characters, hyphens, or underscores."
-        fi
-    done
-
-    # --------------------------------------------------
-    # 5. Package manager selection
+    # 4. Package manager selection
     # --------------------------------------------------
     echo -e "${CYAN}📦 Select package manager:${NC}"
     echo "  1) npm"
@@ -397,7 +382,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 6. Install Prettier
+    # 5. Install Prettier
     # --------------------------------------------------
     echo -ne "${CYAN}🎨 Install Prettier [Y/n]: ${NC}"
     read -r INSTALL_PRETTIER
@@ -409,7 +394,6 @@ main() {
     echo ""
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
-    echo "  Project name: $PROJECT_NAME"
     echo "  Working directory: $(pwd)"
     echo "  Node.js version: $SELECTED_NODE_VERSION"
     echo "  Next.js version: $NEXTJS_VERSION"

@@ -65,15 +65,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 /path/to/dev-scripts/fullstack/setup-project.sh
 ```
 
-### 2. プロジェクト名を確認
+### 2. セットアップの完了を待つ
 
-カレントディレクトリ名がデフォルトとして表示されます。Enter で確定するか、別名を入力してください。
-
-```
-📦 Project name [my-awesome-app]:
-```
-
-### 3. セットアップの完了を待つ
+> Python と Next.js のプロジェクト名は、`uv init` と `create-next-app` が `backend/` / `frontend/` から自動採用します。プロジェクト名の対話入力はありません。
 
 スクリプトは以下を実行します：
 1. カレントディレクトリ直下に `backend/` と `frontend/` を作成

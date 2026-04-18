@@ -46,7 +46,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 ### 実行モデル
 
 - スクリプトは常に **カレントディレクトリ** に対して動作します
-- プロジェクト名はカレントディレクトリ名がデフォルトになり、対話入力で上書き可能
+- プロジェクト名は `uv init` / `create-next-app` がディレクトリ名から自動採用します（プロジェクト名の対話入力はありません）
 - 致命的な衝突（`.venv/`、`pyproject.toml`、`node_modules/`、`package.json` 等）を検出した場合は即座に中止
 - 通常スクリプトが生成するファイルは、**既存があれば温存** します:
   - `README.md`

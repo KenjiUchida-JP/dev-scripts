@@ -44,7 +44,6 @@ Input validation and environment collision detection helpers.
 
 **Functions:**
 ```bash
-validate_project_name "project-name"   # Returns 0 if valid, 1 if invalid
 validate_python_version "3.12.0"       # Returns 0 if valid, 1 if invalid
 
 check_python_collisions                # Returns 0 if clean, 1 if Python project files exist
@@ -53,12 +52,6 @@ check_fullstack_collisions             # Returns 0 if backend/ and frontend/ are
 ```
 
 **Validation Rules:**
-
-Project name:
-- Must not be empty
-- Must start with a letter
-- Can contain only: letters, numbers, hyphens, underscores
-- Pattern: `^[a-zA-Z][a-zA-Z0-9_-]*$`
 
 Python version:
 - Format: `MAJOR.MINOR` or `MAJOR.MINOR.PATCH`
@@ -82,17 +75,6 @@ if ! check_python_collisions; then
     print_error "Existing Python project files detected. Aborting."
     exit 1
 fi
-
-DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
-while true; do
-    read -r PROJECT_NAME
-    PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
-    if validate_project_name "$PROJECT_NAME"; then
-        break
-    else
-        print_error "Invalid project name"
-    fi
-done
 ```
 
 ### gitignore-builder.sh
@@ -212,19 +194,6 @@ main() {
         exit 1
     fi
 
-    # Project name defaults to the current directory's basename
-    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
-    while true; do
-        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
-        read -r PROJECT_NAME
-        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
-        if validate_project_name "$PROJECT_NAME"; then
-            break
-        else
-            print_error "Invalid project name"
-        fi
-    done
-
     # Generate .gitignore (skip if existing was preserved by the caller)
     if [[ ! -f ".gitignore" ]]; then
         print_step "Creating .gitignore..."
@@ -292,7 +261,7 @@ Test in isolation before using in setup scripts:
 
 ```bash
 source scripts/lib/validators.sh
-validate_project_name "my-project" && echo "Valid" || echo "Invalid"
+validate_python_version "3.13" && echo "Valid" || echo "Invalid"
 ```
 
 ## Testing
@@ -307,8 +276,8 @@ print_error "Test failed"
 
 # Test validators
 source scripts/lib/validators.sh
-validate_project_name "valid-project" && echo "Pass" || echo "Fail"
-validate_project_name "123invalid" && echo "Pass" || echo "Fail"
+validate_python_version "3.13" && echo "Pass" || echo "Fail"
+validate_python_version "abc" && echo "Pass" || echo "Fail"
 
 # Test gitignore builder
 source scripts/lib/gitignore-builder.sh

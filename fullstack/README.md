@@ -65,15 +65,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 /path/to/dev-scripts/fullstack/setup-project.sh
 ```
 
-### 2. Confirm the project name
+### 2. Wait for setup to complete
 
-The script defaults to the current directory's basename. Press Enter to accept it, or type a different name.
-
-```
-📦 Project name [my-awesome-app]:
-```
-
-### 3. Wait for setup to complete
+> The Python and Next.js project names are auto-derived from `backend/` and `frontend/` by `uv init` and `create-next-app`. There is no project-name prompt.
 
 The script will:
 1. Create `backend/` and `frontend/` subdirectories in the current directory
