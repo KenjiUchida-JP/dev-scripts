@@ -307,6 +307,14 @@ main() {
     print_nextjs_header
 
     # --------------------------------------------------
+    # 0. Fatal collision check (current directory)
+    # --------------------------------------------------
+    if ! check_node_collisions; then
+        print_error "Existing Node.js project files detected. Aborting to protect them."
+        exit 1
+    fi
+
+    # --------------------------------------------------
     # 1. Check prerequisites and version managers
     # --------------------------------------------------
     print_step "Checking prerequisites..."
@@ -444,11 +452,13 @@ main() {
     done
 
     # --------------------------------------------------
-    # 4. Project name input
+    # 4. Project name input (defaults to current directory name)
     # --------------------------------------------------
+    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
     while true; do
-        echo -ne "${CYAN}📦 Project name: ${NC}"
+        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
         read -r PROJECT_NAME
+        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
         if validate_project_name "$PROJECT_NAME"; then
             break
         else
@@ -457,45 +467,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 5. Setup mode selection (new or existing directory)
-    # --------------------------------------------------
-    echo -e "${CYAN}📂 Select setup mode:${NC}"
-    echo "  1) new      - Create new directory"
-    echo "  2) existing - Use existing directory (must be empty)"
-    while true; do
-        echo -ne "${CYAN}Selection [1]: ${NC}"
-        read -r SETUP_MODE_CHOICE
-        SETUP_MODE_CHOICE="${SETUP_MODE_CHOICE:-1}"
-        case "$SETUP_MODE_CHOICE" in
-            1|new)
-                SETUP_MODE="new"
-                if [[ -d "$PROJECT_NAME" ]]; then
-                    print_error "Directory '$PROJECT_NAME' already exists."
-                    exit 1
-                fi
-                break
-                ;;
-            2|existing)
-                SETUP_MODE="existing"
-                if [[ ! -d "$PROJECT_NAME" ]]; then
-                    print_error "Directory '$PROJECT_NAME' does not exist."
-                    exit 1
-                fi
-                # Check if directory is empty
-                if [[ -n "$(ls -A "$PROJECT_NAME" 2>/dev/null)" ]]; then
-                    print_error "Directory '$PROJECT_NAME' is not empty. Aborting to prevent accidents."
-                    exit 1
-                fi
-                break
-                ;;
-            *)
-                print_error "Please enter 1 or 2."
-                ;;
-        esac
-    done
-
-    # --------------------------------------------------
-    # 6. Package manager selection
+    # 5. Package manager selection
     # --------------------------------------------------
     echo -e "${CYAN}📦 Select package manager:${NC}"
     echo "  1) npm"
@@ -542,7 +514,7 @@ main() {
     done
 
     # --------------------------------------------------
-    # 7. Install Prettier
+    # 6. Install Prettier
     # --------------------------------------------------
     echo -ne "${CYAN}🎨 Install Prettier [Y/n]: ${NC}"
     read -r INSTALL_PRETTIER
@@ -555,9 +527,9 @@ main() {
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Project name: $PROJECT_NAME"
+    echo "  Working directory: $(pwd)"
     echo "  Node.js version: $SELECTED_NODE_VERSION"
     echo "  Next.js version: $NEXTJS_VERSION"
-    echo "  Setup mode: $SETUP_MODE"
     echo "  Package manager: $PKG_MANAGER"
     echo "  TypeScript: Yes (recommended)"
     echo "  ESLint: Yes (recommended)"
@@ -589,42 +561,53 @@ main() {
             ;;
     esac
 
-    # 1. Create Next.js project
+    # 1. Create Next.js project (in current directory)
     print_step "Creating Next.js project with recommended settings..."
 
     # Determine create-next-app version to use
     if [[ "$NEXTJS_VERSION" == "latest" ]]; then
         CNA_VERSION="latest"
     else
-        # Use specific Next.js version with corresponding create-next-app
         CNA_VERSION="$NEXTJS_VERSION"
     fi
 
-    if [[ "$SETUP_MODE" == "existing" ]]; then
-        cd "$PROJECT_NAME"
-        npx create-next-app@${CNA_VERSION} . \
-            --typescript \
-            --eslint \
-            --tailwind \
-            --src-dir \
-            --app \
-            --import-alias "@/*" \
-            $PKG_FLAG
-        cd ..
-    else
-        npx create-next-app@${CNA_VERSION} "$PROJECT_NAME" \
-            --typescript \
-            --eslint \
-            --tailwind \
-            --src-dir \
-            --app \
-            --import-alias "@/*" \
-            $PKG_FLAG
+    # Detect files we should preserve from being overwritten
+    local has_existing_readme=0
+    local has_existing_gitignore=0
+    local has_existing_vscode=0
+    local has_existing_envex=0
+    [[ -f "README.md" ]] && has_existing_readme=1
+    [[ -f ".gitignore" ]] && has_existing_gitignore=1
+    [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
+    [[ -f ".env.example" ]] && has_existing_envex=1
+
+    # Backup files create-next-app might overwrite
+    local cna_backup_dir
+    cna_backup_dir=$(mktemp -d)
+    [[ $has_existing_readme -eq 1 ]] && cp -p README.md "${cna_backup_dir}/README.md"
+    [[ $has_existing_gitignore -eq 1 ]] && cp -p .gitignore "${cna_backup_dir}/.gitignore"
+
+    npx create-next-app@${CNA_VERSION} . \
+        --typescript \
+        --eslint \
+        --tailwind \
+        --src-dir \
+        --app \
+        --import-alias "@/*" \
+        $PKG_FLAG
+
+    # Restore preserved files
+    if [[ $has_existing_readme -eq 1 ]]; then
+        mv "${cna_backup_dir}/README.md" README.md
+        print_warning "Existing README.md preserved"
     fi
+    if [[ $has_existing_gitignore -eq 1 ]]; then
+        mv "${cna_backup_dir}/.gitignore" .gitignore
+        print_warning "Existing .gitignore preserved"
+    fi
+    rm -rf "$cna_backup_dir"
 
     print_success "Created Next.js project (Next.js ${NEXTJS_VERSION})"
-
-    cd "$PROJECT_NAME"
 
     # 2. Install Prettier
     if [[ "$INSTALL_PRETTIER" =~ ^[Yy]$ ]]; then
@@ -683,21 +666,31 @@ ESLINT_EOF
         print_success "Updated ESLint config"
     fi
 
-    # 3. Generate .gitignore (replace default)
-    print_step "Generating .gitignore..."
-    generate_gitignore > .gitignore
-    print_success "Generated .gitignore"
+    # 3. Generate .gitignore (replace create-next-app default; skip if user already had one)
+    if [[ $has_existing_gitignore -eq 0 ]]; then
+        print_step "Replacing default .gitignore with project template..."
+        generate_gitignore > .gitignore
+        print_success "Generated .gitignore"
+    fi
 
-    # 4. Generate .env.example
-    print_step "Generating .env.example..."
-    generate_env_example > .env.example
-    print_success "Generated .env.example"
+    # 4. Generate .env.example (skip if existing)
+    if [[ $has_existing_envex -eq 1 ]]; then
+        print_warning "Existing .env.example preserved (skipped)"
+    else
+        print_step "Generating .env.example..."
+        generate_env_example > .env.example
+        print_success "Generated .env.example"
+    fi
 
-    # 5. Generate VS Code settings
-    print_step "Generating .vscode/settings.json..."
-    mkdir -p .vscode
-    generate_vscode_settings > .vscode/settings.json
-    print_success "Generated .vscode/settings.json"
+    # 5. Generate VS Code settings (skip if existing)
+    if [[ $has_existing_vscode -eq 1 ]]; then
+        print_warning "Existing .vscode/settings.json preserved (skipped)"
+    else
+        print_step "Generating .vscode/settings.json..."
+        mkdir -p .vscode
+        generate_vscode_settings > .vscode/settings.json
+        print_success "Generated .vscode/settings.json"
+    fi
 
     # 6. Generate .nvmrc / .node-version (if version manager was used)
     if [[ "$VERSION_MANAGER" != "none" ]]; then
@@ -718,7 +711,6 @@ ESLINT_EOF
     echo "=================================================="
     echo ""
     echo "Next steps:"
-    echo "  cd $PROJECT_NAME"
     if [[ "$VERSION_MANAGER" == "fnm" ]]; then
         echo "  fnm use                # Use project's Node version"
     elif [[ "$VERSION_MANAGER" == "nvm" ]]; then
