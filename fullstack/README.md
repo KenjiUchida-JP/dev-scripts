@@ -51,38 +51,46 @@ Automatic setup script for fullstack projects combining Python (backend) and Nex
 
 ## Quick Start
 
-### 1. Run the setup script
+### 1. Run the setup script in your project directory
+
+The script always operates on the **current working directory**. `cd` into the target folder (or create one) before running it.
 
 ```bash
-# From the fullstack directory
-./setup-project.sh
+mkdir my-awesome-app && cd my-awesome-app
 
-# Or from the repository root
-./fullstack/setup-project.sh
+# Remote (curl pipe)
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/fullstack/setup-project.sh)
+
+# Or local
+/path/to/dev-scripts/fullstack/setup-project.sh
 ```
 
-### 2. Enter project name
+### 2. Confirm the project name
+
+The script defaults to the current directory's basename. Press Enter to accept it, or type a different name.
 
 ```
-📦 Project name: my-awesome-app
+📦 Project name [my-awesome-app]:
 ```
 
 ### 3. Wait for setup to complete
 
 The script will:
-1. Create project directory structure
-2. Generate unified `.gitignore`
-3. Configure VS Code settings
-4. Set up Python backend with uv
-5. Set up Next.js frontend
-6. Initialize Git repository
+1. Create `backend/` and `frontend/` subdirectories in the current directory
+2. Generate a unified `.gitignore` (skipped if one already exists)
+3. Configure VS Code settings (skipped if `.vscode/settings.json` exists)
+4. Set up the Python backend with uv
+5. Set up the Next.js frontend
+6. Initialize a Git repository (skipped if `.git/` exists)
+
+> The script aborts when fatal collisions are detected (a non-empty `backend/` or `frontend/`). User content like `README.md`, `.gitignore`, `.vscode/settings.json`, and `.git/` is preserved when it already exists.
 
 ## Project Structure
 
-After setup, your project will have this structure:
+After setup the current directory will look like:
 
 ```
-my-awesome-app/
+./                          # Current working directory
 ├── .gitignore              # Unified gitignore for both backend and frontend
 ├── .vscode/
 │   └── settings.json       # Merged VS Code settings
@@ -312,16 +320,8 @@ To modify, edit the templates in `templates/gitignore/`.
 
 ## Related Scripts
 
-- [Python Setup](../python/README.md) - Python-only projects
-- [Next.js Setup](../nextjs/README.md) - Next.js-only projects
-
-## Contributing
-
-When adding new features to the fullstack script:
-1. Update template files in `templates/`
-2. Update this README
-3. Test with a new project from scratch
-4. Submit a pull request
+- [Python Setup](../python/setup-project.sh) - Python-only projects
+- [Next.js Setup](../nextjs/setup-project.sh) - Next.js-only projects
 
 ## License
 

@@ -87,98 +87,7 @@ get_latest_python_version() {
 # --------------------------------------------------
 generate_gitignore() {
     local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-
-    # Prefer new template system
-    if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/python.template" ]]; then
-        build_gitignore_single "$templates_dir" "python"
-    # Fallback to old location (backward compatibility)
-    elif [[ -f "${SCRIPT_DIR}/.gitignore.template" ]]; then
-        cat "${SCRIPT_DIR}/.gitignore.template"
-    else
-        # Last resort: heredoc for curl usage
-        cat << 'GITIGNORE_EOF'
-# ==================================================
-# Python .gitignore
-# ==================================================
-
-# --------------------------------------------------
-# Environment Variables / Secrets
-# --------------------------------------------------
-.env
-.env.local
-.env.*.local
-.env.prod
-.env.dev
-.env.test
-*.pem
-
-# --------------------------------------------------
-# IDE / Editor
-# --------------------------------------------------
-.idea/
-.cursor/
-.claude/
-.vscode/
-*.swp
-*.swo
-*~
-
-# --------------------------------------------------
-# OS Generated
-# --------------------------------------------------
-.DS_Store
-Thumbs.db
-
-# --------------------------------------------------
-# Byte-compiled / Optimized / DLL files
-# --------------------------------------------------
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# --------------------------------------------------
-# Virtual Environments
-# --------------------------------------------------
-.venv/
-venv/
-env/
-ENV/
-
-# --------------------------------------------------
-# Distribution / Packaging
-# --------------------------------------------------
-build/
-dist/
-*.egg-info/
-*.egg
-wheels/
-MANIFEST
-
-# --------------------------------------------------
-# Testing / Coverage
-# --------------------------------------------------
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-
-# --------------------------------------------------
-# Type Checkers / Linters
-# --------------------------------------------------
-.mypy_cache/
-.ruff_cache/
-.pytype/
-
-# --------------------------------------------------
-# Project Specific
-# --------------------------------------------------
-docs/
-tmp/
-GITIGNORE_EOF
-    fi
+    build_gitignore_single "$templates_dir" "python"
 }
 
 # --------------------------------------------------
@@ -218,54 +127,26 @@ main() {
     print_python_header
 
     # --------------------------------------------------
-    # 1. Project name input
+    # 1. Fatal collision check (current directory)
     # --------------------------------------------------
+    if ! check_python_collisions; then
+        print_error "Existing Python project files detected. Aborting to protect them."
+        exit 1
+    fi
+
+    # --------------------------------------------------
+    # 2. Project name input (defaults to current directory name)
+    # --------------------------------------------------
+    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
     while true; do
-        echo -ne "${CYAN}📦 Project name: ${NC}"
+        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
         read -r PROJECT_NAME
+        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
         if validate_project_name "$PROJECT_NAME"; then
             break
         else
             print_error "Invalid project name. Must start with a letter and contain only alphanumeric characters, hyphens, or underscores."
         fi
-    done
-
-    # --------------------------------------------------
-    # 2. Setup mode selection (new or existing directory)
-    # --------------------------------------------------
-    echo -e "${CYAN}📂 Select setup mode:${NC}"
-    echo "  1) new      - Create new directory"
-    echo "  2) existing - Use existing directory (must be empty)"
-    while true; do
-        echo -ne "${CYAN}Selection [1]: ${NC}"
-        read -r SETUP_MODE_CHOICE
-        SETUP_MODE_CHOICE="${SETUP_MODE_CHOICE:-1}"
-        case "$SETUP_MODE_CHOICE" in
-            1|new)
-                SETUP_MODE="new"
-                if [[ -d "$PROJECT_NAME" ]]; then
-                    print_error "Directory '$PROJECT_NAME' already exists."
-                    exit 1
-                fi
-                break
-                ;;
-            2|existing)
-                SETUP_MODE="existing"
-                if [[ ! -d "$PROJECT_NAME" ]]; then
-                    print_error "Directory '$PROJECT_NAME' does not exist."
-                    exit 1
-                fi
-                # Check if directory is empty
-                if [[ -n "$(ls -A "$PROJECT_NAME" 2>/dev/null)" ]]; then
-                    print_error "Directory '$PROJECT_NAME' is not empty. Aborting to prevent accidents."
-                    exit 1
-                fi
-                break
-                ;;
-            *)
-                print_error "Please enter 1 or 2."
-                ;;
-        esac
     done
 
     # --------------------------------------------------
@@ -325,7 +206,7 @@ main() {
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Project name: $PROJECT_NAME"
-    echo "  Setup mode: $SETUP_MODE"
+    echo "  Working directory: $(pwd)"
     echo "  Python version: $PYTHON_VERSION"
     echo "  Project type: $PROJECT_TYPE"
     echo "  Development tools: $([[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install" || echo "Skip")"
@@ -333,49 +214,68 @@ main() {
     echo ""
 
     # --------------------------------------------------
+    # Detect existing files we should preserve
+    # --------------------------------------------------
+    local has_existing_readme=0
+    local has_existing_gitignore=0
+    local has_existing_vscode=0
+    local has_existing_git=0
+    [[ -f "README.md" ]] && has_existing_readme=1
+    [[ -f ".gitignore" ]] && has_existing_gitignore=1
+    [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
+    [[ -d ".git" ]] && has_existing_git=1
+
+    # --------------------------------------------------
     # Start setup
     # --------------------------------------------------
     echo -e "${GREEN}✨ Starting setup...${NC}\n"
 
-    # 1. Create or use directory
-    if [[ "$SETUP_MODE" == "new" ]]; then
-        print_step "Creating directory..."
-        mkdir -p "$PROJECT_NAME"
-        print_success "Created directory '$PROJECT_NAME'"
-    else
-        print_step "Using existing directory..."
-        print_success "Using existing directory '$PROJECT_NAME'"
-    fi
-    cd "$PROJECT_NAME"
-
-    # 2. Install Python
+    # 1. Install Python
     print_step "Installing Python $PYTHON_VERSION..."
     uv python install "$PYTHON_VERSION"
     print_success "Installed Python $PYTHON_VERSION"
 
-    # 3. Initialize project
+    # 2. Initialize project (in current directory)
     print_step "Initializing project..."
-    uv init --name "$PROJECT_NAME" --python "$PYTHON_VERSION" --"$PROJECT_TYPE"
+    local uv_init_args=(--name "$PROJECT_NAME" --python "$PYTHON_VERSION" "--$PROJECT_TYPE")
+    [[ $has_existing_readme -eq 1 ]] && uv_init_args+=(--no-readme)
+
+    # Backup .gitignore in case `uv init` regenerates it
+    local gitignore_backup=""
+    if [[ $has_existing_gitignore -eq 1 ]]; then
+        gitignore_backup=$(mktemp)
+        cp .gitignore "$gitignore_backup"
+    fi
+
+    uv init "${uv_init_args[@]}"
+
+    # Restore preserved .gitignore
+    if [[ $has_existing_gitignore -eq 1 ]]; then
+        mv "$gitignore_backup" .gitignore
+        print_warning "Existing .gitignore preserved (skipped regeneration)"
+    fi
     print_success "Initialized project"
 
-    # 4. Install development tools
+    # 3. Install development tools
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
         print_step "Installing development tools..."
         uv add --dev ruff mypy pytest
         print_success "Installed development tools"
     fi
 
-    # 5. Sync dependencies
+    # 4. Sync dependencies
     print_step "Syncing dependencies..."
     uv sync
     print_success "Synced dependencies"
 
-    # 6. Generate .gitignore
-    print_step "Generating .gitignore..."
-    generate_gitignore > .gitignore
-    print_success "Generated .gitignore"
+    # 5. Generate .gitignore (only when there is no existing one)
+    if [[ $has_existing_gitignore -eq 0 ]]; then
+        print_step "Generating .gitignore..."
+        generate_gitignore > .gitignore
+        print_success "Generated .gitignore"
+    fi
 
-    # 7. Append tool configuration to pyproject.toml
+    # 6. Append tool configuration to pyproject.toml
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
         print_step "Appending tool configuration to pyproject.toml..."
         local py_version
@@ -386,18 +286,19 @@ main() {
         print_success "Appended tool configuration"
     fi
 
-    # 8. Create src directory
+    # 7. Create src directory
     print_step "Creating src directory..."
     mkdir -p src
-    touch src/__init__.py
+    [[ ! -f "src/__init__.py" ]] && touch src/__init__.py
     print_success "Created src directory"
 
-    # 9. Create tests directory with conftest.py
+    # 8. Create tests directory with conftest.py
     if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
         print_step "Creating tests directory..."
         mkdir -p tests
-        touch tests/__init__.py
-        cat > tests/conftest.py << 'CONFTEST_EOF'
+        [[ ! -f "tests/__init__.py" ]] && touch tests/__init__.py
+        if [[ ! -f "tests/conftest.py" ]]; then
+            cat > tests/conftest.py << 'CONFTEST_EOF'
 """
 pytest configuration file
 
@@ -411,29 +312,28 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 CONFTEST_EOF
+        fi
         print_success "Created tests directory with conftest.py"
     fi
 
-    # 9. Create .vscode/settings.json
-    print_step "Creating .vscode/settings.json..."
-    mkdir -p .vscode
-    local vscode_template="${SCRIPT_DIR}/templates/vscode/python.settings.json"
-    if [[ -f "$vscode_template" ]]; then
-        cp "$vscode_template" .vscode/settings.json
+    # 9. Create .vscode/settings.json (skip if existing)
+    if [[ $has_existing_vscode -eq 1 ]]; then
+        print_warning "Existing .vscode/settings.json preserved (skipped)"
     else
-        # Fallback to inline template
-        cat > .vscode/settings.json << VSCODE_EOF
-{
-    "python.defaultInterpreterPath": "\${workspaceFolder}/.venv/bin/python"
-}
-VSCODE_EOF
+        print_step "Creating .vscode/settings.json..."
+        mkdir -p .vscode
+        cp "${SCRIPT_DIR}/templates/vscode/python.settings.json" .vscode/settings.json
+        print_success "Created .vscode/settings.json"
     fi
-    print_success "Created .vscode/settings.json"
 
-    # 10. Initialize Git
-    print_step "Initializing Git repository..."
-    git init --quiet
-    print_success "Initialized Git repository"
+    # 10. Initialize Git (skip if existing)
+    if [[ $has_existing_git -eq 1 ]]; then
+        print_warning "Existing .git/ preserved (skipped git init)"
+    else
+        print_step "Initializing Git repository..."
+        git init --quiet
+        print_success "Initialized Git repository"
+    fi
 
     # --------------------------------------------------
     # Completion message
@@ -444,8 +344,8 @@ VSCODE_EOF
     echo "=================================================="
     echo ""
     echo "Next steps:"
-    echo "  cd $PROJECT_NAME"
-    echo "  source .venv/bin/activate  # or: uv run python"
+    echo "  uv run python                # Run Python in virtual environment"
+    echo "  source .venv/bin/activate    # Or activate the venv directly"
     echo ""
     echo "Useful commands:"
     echo "  uv add <package>      # Add a package"

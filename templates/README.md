@@ -55,35 +55,14 @@ cp templates/vscode/fullstack.settings.json .vscode/settings.json
 
 1. Create template file in appropriate subdirectory
 2. Update `scripts/lib/gitignore-builder.sh` if needed
-3. Add build script in language directory
-4. Update setup script to use new template
+3. Update the relevant setup script(s) to use the new template
 
 ### Modifying Templates
 
-When templates are modified, setup scripts must be regenerated:
-
-```bash
-# Manual update
-./python/build.sh
-./nextjs/build.sh
-./fullstack/build.sh
-
-# Automatic on commit
-# pre-commit hook runs all build scripts
-git commit -m "Update templates"
-```
-
-### Template Validation
-
-Templates are validated in CI:
-
-- `.github/workflows/check-build.yml` runs all build scripts
-- Checks for uncommitted changes after build
-- Ensures templates and setup scripts stay in sync
+Setup scripts read these templates directly at runtime, so edits take effect immediately on the next setup run — no regeneration step required. Curl-based remote execution downloads the templates into a temp dir before running.
 
 ## Design Principles
 
 1. **Single Source of Truth**: All templates in one place
 2. **Composability**: Mix and match templates for different project types
 3. **DRY**: Common patterns defined once in `base.template`
-4. **Automation**: Build scripts keep everything in sync

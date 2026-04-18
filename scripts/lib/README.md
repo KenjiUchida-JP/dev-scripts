@@ -40,12 +40,16 @@ print_error "Setup failed"
 
 ### validators.sh
 
-Input validation functions for user input sanitization.
+Input validation and environment collision detection helpers.
 
 **Functions:**
 ```bash
 validate_project_name "project-name"   # Returns 0 if valid, 1 if invalid
 validate_python_version "3.12.0"       # Returns 0 if valid, 1 if invalid
+
+check_python_collisions                # Returns 0 if clean, 1 if Python project files exist
+check_node_collisions                  # Returns 0 if clean, 1 if Node.js project files exist
+check_fullstack_collisions             # Returns 0 if backend/ and frontend/ are empty/absent
 ```
 
 **Validation Rules:**
@@ -61,12 +65,28 @@ Python version:
 - Pattern: `^[0-9]+\.[0-9]+(\.[0-9]+)?$`
 - Examples: `3.12`, `3.12.0`
 
+**Collision detection:**
+
+The `check_*_collisions` helpers print fatal items to stderr and return non-zero
+when project files that would conflict with a fresh setup are present in the
+current directory. They intentionally do *not* flag `README.md`, `.gitignore`,
+or `.vscode/settings.json` — caller scripts handle those by skipping
+regeneration so existing content is preserved.
+
 **Usage:**
 ```bash
 source "${SCRIPT_DIR}/../scripts/lib/validators.sh"
 
+# Abort early if a previous Python environment exists in the current dir
+if ! check_python_collisions; then
+    print_error "Existing Python project files detected. Aborting."
+    exit 1
+fi
+
+DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
 while true; do
     read -r PROJECT_NAME
+    PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
     if validate_project_name "$PROJECT_NAME"; then
         break
     else
@@ -186,10 +206,18 @@ source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
 main() {
     print_header "Python Project Setup"
 
-    # Get project name
+    # Abort early on fatal collisions in the current directory
+    if ! check_python_collisions; then
+        print_error "Existing Python project files detected. Aborting."
+        exit 1
+    fi
+
+    # Project name defaults to the current directory's basename
+    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
     while true; do
-        echo -ne "${CYAN}📦 Project name: ${NC}"
+        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
         read -r PROJECT_NAME
+        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
         if validate_project_name "$PROJECT_NAME"; then
             break
         else
@@ -197,16 +225,13 @@ main() {
         fi
     done
 
-    print_step "Creating directory..."
-    mkdir -p "$PROJECT_NAME"
-    cd "$PROJECT_NAME"
-    print_success "Directory created"
-
-    # Generate .gitignore
-    print_step "Creating .gitignore..."
-    TEMPLATES_DIR=$(get_templates_dir "$SCRIPT_DIR")
-    build_gitignore_single "$TEMPLATES_DIR" "python" > .gitignore
-    print_success ".gitignore created"
+    # Generate .gitignore (skip if existing was preserved by the caller)
+    if [[ ! -f ".gitignore" ]]; then
+        print_step "Creating .gitignore..."
+        TEMPLATES_DIR=$(get_templates_dir "$SCRIPT_DIR")
+        build_gitignore_single "$TEMPLATES_DIR" "python" > .gitignore
+        print_success ".gitignore created"
+    fi
 }
 
 main "$@"

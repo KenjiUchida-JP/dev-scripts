@@ -207,54 +207,26 @@ main() {
     print_fullstack_header
 
     # --------------------------------------------------
-    # 1. Project name input
+    # 1. Fatal collision check (current directory + backend/ + frontend/)
     # --------------------------------------------------
+    if ! check_fullstack_collisions; then
+        print_error "Existing backend/ or frontend/ content detected. Aborting to protect them."
+        exit 1
+    fi
+
+    # --------------------------------------------------
+    # 2. Project name input (defaults to current directory name)
+    # --------------------------------------------------
+    DEFAULT_PROJECT_NAME=$(basename "$(pwd)")
     while true; do
-        echo -ne "${CYAN}📦 Project name: ${NC}"
+        echo -ne "${CYAN}📦 Project name [${DEFAULT_PROJECT_NAME}]: ${NC}"
         read -r PROJECT_NAME
+        PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
         if validate_project_name "$PROJECT_NAME"; then
             break
         else
             print_error "Invalid project name. Must start with a letter and contain only alphanumeric characters, hyphens, or underscores."
         fi
-    done
-
-    # --------------------------------------------------
-    # 2. Setup mode selection (new or existing directory)
-    # --------------------------------------------------
-    echo -e "${CYAN}📂 Select setup mode:${NC}"
-    echo "  1) new      - Create new directory"
-    echo "  2) existing - Use existing directory (must be empty)"
-    while true; do
-        echo -ne "${CYAN}Selection [1]: ${NC}"
-        read -r SETUP_MODE_CHOICE
-        SETUP_MODE_CHOICE="${SETUP_MODE_CHOICE:-1}"
-        case "$SETUP_MODE_CHOICE" in
-            1|new)
-                SETUP_MODE="new"
-                if [[ -d "$PROJECT_NAME" ]]; then
-                    print_error "Directory '$PROJECT_NAME' already exists."
-                    exit 1
-                fi
-                break
-                ;;
-            2|existing)
-                SETUP_MODE="existing"
-                if [[ ! -d "$PROJECT_NAME" ]]; then
-                    print_error "Directory '$PROJECT_NAME' does not exist."
-                    exit 1
-                fi
-                # Check if directory is empty
-                if [[ -n "$(ls -A "$PROJECT_NAME" 2>/dev/null)" ]]; then
-                    print_error "Directory '$PROJECT_NAME' is not empty. Aborting to prevent accidents."
-                    exit 1
-                fi
-                break
-                ;;
-            *)
-                print_error "Please enter 1 or 2."
-                ;;
-        esac
     done
 
     # --------------------------------------------------
@@ -505,7 +477,7 @@ main() {
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Project name: $PROJECT_NAME"
-    echo "  Setup mode: $SETUP_MODE"
+    echo "  Working directory: $(pwd)"
     echo "  Stack: Python (backend) + Next.js (frontend)"
     echo "  Structure:"
     echo "    ├── backend/   (Python)"
@@ -530,53 +502,54 @@ main() {
     echo ""
 
     # --------------------------------------------------
+    # Detect existing files we should preserve at root
+    # --------------------------------------------------
+    local has_existing_gitignore=0
+    local has_existing_vscode=0
+    local has_existing_git=0
+    [[ -f ".gitignore" ]] && has_existing_gitignore=1
+    [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
+    [[ -d ".git" ]] && has_existing_git=1
+
+    # --------------------------------------------------
     # Start setup
     # --------------------------------------------------
     echo -e "${GREEN}✨ Starting setup...${NC}\n"
 
-    # 1. Create or use root directory
-    if [[ "$SETUP_MODE" == "new" ]]; then
-        print_step "Creating project directory..."
-        mkdir -p "$PROJECT_NAME"
-        print_success "Created directory '$PROJECT_NAME'"
-    else
-        print_step "Using existing directory..."
-        print_success "Using existing directory '$PROJECT_NAME'"
-    fi
-    cd "$PROJECT_NAME"
-
-    # 2. Create subdirectories
+    # 1. Create subdirectories (in current directory)
     print_step "Creating subdirectories..."
     mkdir -p backend frontend
     print_success "Created backend/ and frontend/ directories"
 
-    # 3. Generate unified .gitignore with path prefixes
-    print_step "Generating .gitignore..."
-    local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-    if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/python.template" && -f "${templates_dir}/nextjs.template" ]]; then
-        build_gitignore_fullstack "$templates_dir" "python" "nextjs" > .gitignore
+    # 2. Generate unified .gitignore with path prefixes (skip if existing)
+    if [[ $has_existing_gitignore -eq 1 ]]; then
+        print_warning "Existing .gitignore preserved (skipped)"
+    else
+        print_step "Generating .gitignore..."
+        build_gitignore_fullstack "${SCRIPT_DIR}/templates/gitignore" "python" "nextjs" > .gitignore
         print_success "Generated unified .gitignore"
-    else
-        print_warning "Template files not found, skipping .gitignore generation"
     fi
 
-    # 4. Generate VS Code settings
-    print_step "Creating .vscode/settings.json..."
-    mkdir -p .vscode
-    local vscode_template="${SCRIPT_DIR}/templates/vscode/fullstack.settings.json"
-    if [[ -f "$vscode_template" ]]; then
-        cp "$vscode_template" .vscode/settings.json
+    # 3. Generate VS Code settings (skip if existing)
+    if [[ $has_existing_vscode -eq 1 ]]; then
+        print_warning "Existing .vscode/settings.json preserved (skipped)"
+    else
+        print_step "Creating .vscode/settings.json..."
+        mkdir -p .vscode
+        cp "${SCRIPT_DIR}/templates/vscode/fullstack.settings.json" .vscode/settings.json
         print_success "Created .vscode/settings.json"
-    else
-        print_warning "VS Code template not found, skipping"
     fi
 
-    # 5. Initialize Git at root
-    print_step "Initializing Git repository..."
-    git init --quiet
-    print_success "Initialized Git repository"
+    # 4. Initialize Git at root (skip if existing)
+    if [[ $has_existing_git -eq 1 ]]; then
+        print_warning "Existing .git/ preserved (skipped git init)"
+    else
+        print_step "Initializing Git repository..."
+        git init --quiet
+        print_success "Initialized Git repository"
+    fi
 
-    # 6. Setup backend (Python)
+    # 5. Setup backend (Python)
     print_header "Setting up backend (Python)"
     cd backend
 
@@ -669,7 +642,7 @@ TOML_EOF
     cd ..
     print_success "Backend setup complete"
 
-    # 7. Setup frontend (Next.js)
+    # 6. Setup frontend (Next.js)
     print_header "Setting up frontend (Next.js)"
     cd frontend
 
@@ -795,16 +768,15 @@ ESLINT_EOF
     echo "=================================================="
     echo ""
     echo "Project structure:"
-    echo "  $PROJECT_NAME/"
+    echo "  $(pwd)/"
     echo "  ├── backend/   (Python $PYTHON_VERSION with uv)"
     echo "  └── frontend/  (Next.js with $PKG_MANAGER)"
     echo ""
     echo "Next steps:"
-    echo "  cd $PROJECT_NAME"
     if [[ "$VERSION_MANAGER" == "fnm" ]]; then
-        echo "  fnm use                # Use project's Node version (in frontend/)"
+        echo "  cd frontend && fnm use   # Use project's Node version"
     elif [[ "$VERSION_MANAGER" == "nvm" ]]; then
-        echo "  nvm use                # Use project's Node version (in frontend/)"
+        echo "  cd frontend && nvm use   # Use project's Node version"
     fi
     echo ""
     echo "Backend commands (from backend/ directory):"
