@@ -51,38 +51,46 @@ Python（バックエンド）と Next.js（フロントエンド）を組み合
 
 ## クイックスタート
 
-### 1. セットアップスクリプトを実行
+### 1. プロジェクトディレクトリでセットアップを実行
+
+スクリプトは常に **カレントディレクトリ** に対して動作します。対象フォルダを作成（または `cd`）してから実行してください。
 
 ```bash
-# fullstack ディレクトリから
-./setup-project.sh
+mkdir my-awesome-app && cd my-awesome-app
 
-# またはリポジトリルートから
-./fullstack/setup-project.sh
+# リモート（curl 経由）
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/fullstack/setup-project.sh)
+
+# またはローカル
+/path/to/dev-scripts/fullstack/setup-project.sh
 ```
 
-### 2. プロジェクト名を入力
+### 2. プロジェクト名を確認
+
+カレントディレクトリ名がデフォルトとして表示されます。Enter で確定するか、別名を入力してください。
 
 ```
-📦 Project name: my-awesome-app
+📦 Project name [my-awesome-app]:
 ```
 
 ### 3. セットアップの完了を待つ
 
 スクリプトは以下を実行します：
-1. プロジェクトディレクトリ構造を作成
-2. 統合された `.gitignore` を生成
-3. VS Code 設定を構成
+1. カレントディレクトリ直下に `backend/` と `frontend/` を作成
+2. 統合された `.gitignore` を生成（既存があればスキップ）
+3. VS Code 設定を構成（`.vscode/settings.json` 既存ならスキップ）
 4. uv で Python バックエンドをセットアップ
 5. Next.js フロントエンドをセットアップ
-6. Git リポジトリを初期化
+6. Git リポジトリを初期化（`.git/` 既存ならスキップ）
+
+> 致命的な衝突（中身がある `backend/` または `frontend/`）を検出すると中止します。`README.md`、`.gitignore`、`.vscode/settings.json`、`.git/` などのユーザーコンテンツは既存があれば温存されます。
 
 ## プロジェクト構造
 
-セットアップ後、プロジェクトは以下の構造になります：
+セットアップ後、カレントディレクトリは以下の構造になります：
 
 ```
-my-awesome-app/
+./                          # カレントディレクトリ
 ├── .gitignore              # バックエンドとフロントエンドの両方の統合 gitignore
 ├── .vscode/
 │   └── settings.json       # マージされた VS Code 設定
@@ -312,8 +320,8 @@ pnpm add @radix-ui/react-dialog class-variance-authority clsx tailwind-merge
 
 ## 関連スクリプト
 
-- [Python セットアップ](../python/README.md) - Python のみのプロジェクト
-- [Next.js セットアップ](../nextjs/README.md) - Next.js のみのプロジェクト
+- [Python セットアップ](../python/setup-project.sh) - Python のみのプロジェクト
+- [Next.js セットアップ](../nextjs/setup-project.sh) - Next.js のみのプロジェクト
 
 ## コントリビューション
 
