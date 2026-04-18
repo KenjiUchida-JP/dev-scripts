@@ -24,14 +24,11 @@ Templates are composed using `scripts/lib/gitignore-builder.sh`:
 
 ```bash
 # Single language
-build_gitignore "base" "python"  # Python project
-build_gitignore "base" "nextjs"  # Next.js project
+build_gitignore_single "$templates_dir" "python"  # Python project
+build_gitignore_single "$templates_dir" "nextjs"  # Next.js project
 
-# Fullstack with path prefixes
-build_gitignore_with_prefixes \
-    "base:." \
-    "python:backend" \
-    "nextjs:frontend"
+# Fullstack with path prefixes (python → backend/, nextjs → frontend/)
+build_gitignore_fullstack "$templates_dir" "python" "nextjs"
 ```
 
 **Template Composition Rules:**
@@ -69,6 +66,7 @@ When templates are modified, setup scripts must be regenerated:
 # Manual update
 ./python/build.sh
 ./nextjs/build.sh
+./fullstack/build.sh
 
 # Automatic on commit
 # pre-commit hook runs all build scripts
@@ -89,4 +87,3 @@ Templates are validated in CI:
 2. **Composability**: Mix and match templates for different project types
 3. **DRY**: Common patterns defined once in `base.template`
 4. **Automation**: Build scripts keep everything in sync
-5. **Backward Compatibility**: Old template locations deprecated but still work
