@@ -13,6 +13,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 BUILD_SCRIPTS=(
     "${REPO_ROOT}/python/build.sh"
     "${REPO_ROOT}/nextjs/build.sh"
+    "${REPO_ROOT}/fullstack/build.sh"
 )
 
 # Check if any templates or related files are being committed
