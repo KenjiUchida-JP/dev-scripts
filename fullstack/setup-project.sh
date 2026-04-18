@@ -526,13 +526,8 @@ main() {
         print_warning "Existing .gitignore preserved (skipped)"
     else
         print_step "Generating .gitignore..."
-        local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-        if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/python.template" && -f "${templates_dir}/nextjs.template" ]]; then
-            build_gitignore_fullstack "$templates_dir" "python" "nextjs" > .gitignore
-            print_success "Generated unified .gitignore"
-        else
-            print_warning "Template files not found, skipping .gitignore generation"
-        fi
+        build_gitignore_fullstack "${SCRIPT_DIR}/templates/gitignore" "python" "nextjs" > .gitignore
+        print_success "Generated unified .gitignore"
     fi
 
     # 3. Generate VS Code settings (skip if existing)
@@ -541,13 +536,8 @@ main() {
     else
         print_step "Creating .vscode/settings.json..."
         mkdir -p .vscode
-        local vscode_template="${SCRIPT_DIR}/templates/vscode/fullstack.settings.json"
-        if [[ -f "$vscode_template" ]]; then
-            cp "$vscode_template" .vscode/settings.json
-            print_success "Created .vscode/settings.json"
-        else
-            print_warning "VS Code template not found, skipping"
-        fi
+        cp "${SCRIPT_DIR}/templates/vscode/fullstack.settings.json" .vscode/settings.json
+        print_success "Created .vscode/settings.json"
     fi
 
     # 4. Initialize Git at root (skip if existing)

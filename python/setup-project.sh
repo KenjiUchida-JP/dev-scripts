@@ -87,98 +87,7 @@ get_latest_python_version() {
 # --------------------------------------------------
 generate_gitignore() {
     local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-
-    # Prefer new template system
-    if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/python.template" ]]; then
-        build_gitignore_single "$templates_dir" "python"
-    # Fallback to old location (backward compatibility)
-    elif [[ -f "${SCRIPT_DIR}/.gitignore.template" ]]; then
-        cat "${SCRIPT_DIR}/.gitignore.template"
-    else
-        # Last resort: heredoc for curl usage
-        cat << 'GITIGNORE_EOF'
-# ==================================================
-# Python .gitignore
-# ==================================================
-
-# --------------------------------------------------
-# Environment Variables / Secrets
-# --------------------------------------------------
-.env
-.env.local
-.env.*.local
-.env.prod
-.env.dev
-.env.test
-*.pem
-
-# --------------------------------------------------
-# IDE / Editor
-# --------------------------------------------------
-.idea/
-.cursor/
-.claude/
-.vscode/
-*.swp
-*.swo
-*~
-
-# --------------------------------------------------
-# OS Generated
-# --------------------------------------------------
-.DS_Store
-Thumbs.db
-
-# --------------------------------------------------
-# Byte-compiled / Optimized / DLL files
-# --------------------------------------------------
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# --------------------------------------------------
-# Virtual Environments
-# --------------------------------------------------
-.venv/
-venv/
-env/
-ENV/
-
-# --------------------------------------------------
-# Distribution / Packaging
-# --------------------------------------------------
-build/
-dist/
-*.egg-info/
-*.egg
-wheels/
-MANIFEST
-
-# --------------------------------------------------
-# Testing / Coverage
-# --------------------------------------------------
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-
-# --------------------------------------------------
-# Type Checkers / Linters
-# --------------------------------------------------
-.mypy_cache/
-.ruff_cache/
-.pytype/
-
-# --------------------------------------------------
-# Project Specific
-# --------------------------------------------------
-docs/
-tmp/
-GITIGNORE_EOF
-    fi
+    build_gitignore_single "$templates_dir" "python"
 }
 
 # --------------------------------------------------
@@ -413,16 +322,7 @@ CONFTEST_EOF
     else
         print_step "Creating .vscode/settings.json..."
         mkdir -p .vscode
-        local vscode_template="${SCRIPT_DIR}/templates/vscode/python.settings.json"
-        if [[ -f "$vscode_template" ]]; then
-            cp "$vscode_template" .vscode/settings.json
-        else
-            cat > .vscode/settings.json << VSCODE_EOF
-{
-    "python.defaultInterpreterPath": "\${workspaceFolder}/.venv/bin/python"
-}
-VSCODE_EOF
-        fi
+        cp "${SCRIPT_DIR}/templates/vscode/python.settings.json" .vscode/settings.json
         print_success "Created .vscode/settings.json"
     fi
 

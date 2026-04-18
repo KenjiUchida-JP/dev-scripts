@@ -129,94 +129,7 @@ get_latest_nextjs_version() {
 # --------------------------------------------------
 generate_gitignore() {
     local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-
-    # Prefer new template system
-    if [[ -f "${templates_dir}/base.template" && -f "${templates_dir}/nextjs.template" ]]; then
-        build_gitignore_single "$templates_dir" "nextjs"
-    # Fallback to old location (backward compatibility)
-    elif [[ -f "${SCRIPT_DIR}/.gitignore.template" ]]; then
-        cat "${SCRIPT_DIR}/.gitignore.template"
-    else
-        # Last resort: heredoc for curl usage
-        cat << 'GITIGNORE_EOF'
-# ==================================================
-# Next.js Project .gitignore Template
-# ==================================================
-
-# --------------------------------------------------
-# Dependencies
-# --------------------------------------------------
-node_modules/
-.pnp/
-.pnp.js
-
-# --------------------------------------------------
-# Build / Production
-# --------------------------------------------------
-.next/
-out/
-build/
-dist/
-
-# --------------------------------------------------
-# Testing
-# --------------------------------------------------
-coverage/
-.nyc_output/
-
-# --------------------------------------------------
-# Environment Variables / Secrets
-# --------------------------------------------------
-.env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.pem
-
-# --------------------------------------------------
-# Debug / Logs
-# --------------------------------------------------
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# --------------------------------------------------
-# Vercel
-# --------------------------------------------------
-.vercel
-
-# --------------------------------------------------
-# TypeScript
-# --------------------------------------------------
-*.tsbuildinfo
-next-env.d.ts
-
-# --------------------------------------------------
-# IDE / Editor
-# --------------------------------------------------
-.idea/
-.cursor/
-.claude/
-*.swp
-*.swo
-*~
-
-# --------------------------------------------------
-# OS Generated
-# --------------------------------------------------
-.DS_Store
-Thumbs.db
-
-# --------------------------------------------------
-# Misc
-# --------------------------------------------------
-*.log
-tmp/
-GITIGNORE_EOF
-    fi
+    build_gitignore_single "$templates_dir" "nextjs"
 }
 
 # --------------------------------------------------
@@ -252,37 +165,7 @@ ENV_EOF
 # Generate VS Code settings
 # --------------------------------------------------
 generate_vscode_settings() {
-    local vscode_template="${SCRIPT_DIR}/templates/vscode/nextjs.settings.json"
-    if [[ -f "$vscode_template" ]]; then
-        cat "$vscode_template"
-    else
-        # Fallback to inline template
-        cat << 'VSCODE_EOF'
-{
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": "explicit"
-    },
-    "[typescript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[typescriptreact]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[javascript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[javascriptreact]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[json]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "typescript.tsdk": "node_modules/typescript/lib"
-}
-VSCODE_EOF
-    fi
+    cat "${SCRIPT_DIR}/templates/vscode/nextjs.settings.json"
 }
 
 # --------------------------------------------------
