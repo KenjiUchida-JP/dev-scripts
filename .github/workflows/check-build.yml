@@ -1,0 +1,53 @@
+name: Check Build Sync
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'templates/**'
+      - 'python/**'
+      - 'nextjs/**'
+      - 'fullstack/**'
+      - 'scripts/lib/**'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'templates/**'
+      - 'python/**'
+      - 'nextjs/**'
+      - 'fullstack/**'
+      - 'scripts/lib/**'
+
+jobs:
+  check-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Python build.sh
+        run: ./python/build.sh
+
+      - name: Run Next.js build.sh
+        run: ./nextjs/build.sh
+
+      - name: Run Fullstack build.sh
+        run: ./fullstack/build.sh
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::Setup scripts are out of sync with templates"
+            echo "Run build.sh scripts and commit the changes:"
+            echo "  ./python/build.sh"
+            echo "  ./nextjs/build.sh"
+            echo "  ./fullstack/build.sh"
+            echo ""
+            echo "Changed files:"
+            git diff --name-only
+            echo ""
+            echo "Diff:"
+            git diff
+            exit 1
+          fi
+          echo "✅ All files are in sync"
