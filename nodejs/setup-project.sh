@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==================================================
-# Next.js Project Setup Script
-# Automatic Next.js environment setup with recommended settings
+# Node.js Project Setup Script
+# Sets up a local Node.js + TypeScript runtime environment
+# (no application framework — for running scripts, not building apps)
 # ==================================================
 
 set -e
@@ -24,15 +25,18 @@ if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/ ]] || [[ "${BASH_SOURCE[0]}" =~ ^/proc/se
     # Download template files
     mkdir -p "$TEMP_DIR/templates/gitignore"
     curl -fsSL "$REPO_BASE/templates/gitignore/base.template" -o "$TEMP_DIR/templates/gitignore/base.template"
-    curl -fsSL "$REPO_BASE/templates/gitignore/nextjs.template" -o "$TEMP_DIR/templates/gitignore/nextjs.template"
+    curl -fsSL "$REPO_BASE/templates/gitignore/nodejs.template" -o "$TEMP_DIR/templates/gitignore/nodejs.template"
 
     mkdir -p "$TEMP_DIR/templates/vscode"
-    curl -fsSL "$REPO_BASE/templates/vscode/nextjs.settings.json" -o "$TEMP_DIR/templates/vscode/nextjs.settings.json"
+    curl -fsSL "$REPO_BASE/templates/vscode/nodejs.settings.json" -o "$TEMP_DIR/templates/vscode/nodejs.settings.json"
+
+    mkdir -p "$TEMP_DIR/templates/claude"
+    curl -fsSL "$REPO_BASE/templates/claude/nodejs.template.md" -o "$TEMP_DIR/templates/claude/nodejs.template.md"
 
     SCRIPT_DIR="$TEMP_DIR"
 else
-    # Running locally
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Running locally (repo root, one level up from this script's directory)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fi
 
 # --------------------------------------------------
@@ -43,10 +47,10 @@ source "${SCRIPT_DIR}/scripts/lib/validators.sh"
 source "${SCRIPT_DIR}/scripts/lib/gitignore-builder.sh"
 
 # --------------------------------------------------
-# Custom header for Next.js projects
+# Custom header for Node.js projects
 # --------------------------------------------------
-print_nextjs_header() {
-    echo -e "\n${CYAN}⚡ Next.js Project Setup${NC}"
+print_nodejs_header() {
+    echo -e "\n${CYAN}⬢ Node.js Project Setup${NC}"
     echo "=================================================="
 }
 
@@ -109,18 +113,14 @@ get_fnm_lts_version() {
 }
 
 # --------------------------------------------------
-# Next.js version helper functions
+# pnpm blocks dependency lifecycle scripts by default (supply-chain safety)
+# and exits non-zero when a package's build gets skipped as a result (e.g.
+# esbuild's postinstall). Auto-approve so the script neither aborts under
+# `set -e` nor silently leaves those packages half-installed.
 # --------------------------------------------------
-
-# Get latest stable Next.js version
-get_latest_nextjs_version() {
-    local version
-    version=$(npm view next version 2>/dev/null)
-    if [[ -z "$version" ]]; then
-        # Fallback if unable to retrieve
-        echo "latest"
-    else
-        echo "$version"
+pnpm_install() {
+    if ! pnpm "$@"; then
+        pnpm approve-builds --all
     fi
 }
 
@@ -129,43 +129,38 @@ get_latest_nextjs_version() {
 # --------------------------------------------------
 generate_gitignore() {
     local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-    build_gitignore_single "$templates_dir" "nextjs"
-}
-
-# --------------------------------------------------
-# Generate .env.example
-# --------------------------------------------------
-generate_env_example() {
-    cat << 'ENV_EOF'
-# ==================================================
-# Environment Variables
-# ==================================================
-# Copy this file to .env.local and fill in your values
-# NEVER commit .env.local to version control
-
-# --------------------------------------------------
-# Application
-# --------------------------------------------------
-# NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# --------------------------------------------------
-# Database (Example)
-# --------------------------------------------------
-# DATABASE_URL=
-
-# --------------------------------------------------
-# Authentication (Example)
-# --------------------------------------------------
-# NEXTAUTH_SECRET=
-# NEXTAUTH_URL=http://localhost:3000
-ENV_EOF
+    build_gitignore_single "$templates_dir" "nodejs"
 }
 
 # --------------------------------------------------
 # Generate VS Code settings
 # --------------------------------------------------
 generate_vscode_settings() {
-    cat "${SCRIPT_DIR}/templates/vscode/nextjs.settings.json"
+    cat "${SCRIPT_DIR}/templates/vscode/nodejs.settings.json"
+}
+
+# --------------------------------------------------
+# Generate tsconfig.json
+# --------------------------------------------------
+generate_tsconfig() {
+    cat << 'TSCONFIG_EOF'
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022"],
+        "outDir": "dist",
+        "rootDir": "src",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true
+    },
+    "include": ["src"]
+}
+TSCONFIG_EOF
 }
 
 # --------------------------------------------------
@@ -184,10 +179,44 @@ PRETTIER_EOF
 }
 
 # --------------------------------------------------
+# Generate ESLint flat config
+# --------------------------------------------------
+generate_eslint_config() {
+    cat << 'ESLINT_EOF'
+// @ts-check
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
+import eslintConfigPrettier from "eslint-config-prettier";
+
+export default tseslint.config(
+    eslint.configs.recommended,
+    ...tseslint.configs.recommended,
+    eslintConfigPrettier,
+    {
+        ignores: ["dist/"],
+    }
+);
+ESLINT_EOF
+}
+
+# --------------------------------------------------
+# Generate src/index.ts stub
+# --------------------------------------------------
+generate_index_ts() {
+    cat << 'INDEX_EOF'
+export function main(): void {
+    console.log("Hello from Node.js!");
+}
+
+main();
+INDEX_EOF
+}
+
+# --------------------------------------------------
 # Main process
 # --------------------------------------------------
 main() {
-    print_nextjs_header
+    print_nodejs_header
 
     # --------------------------------------------------
     # 0. Fatal collision check (current directory)
@@ -316,52 +345,36 @@ main() {
     fi
 
     # --------------------------------------------------
-    # 3. Next.js version input
+    # 3. Package manager selection (pnpm preferred by default)
     # --------------------------------------------------
-    print_step "Checking latest stable Next.js version..."
-    DEFAULT_NEXTJS_VERSION=$(get_latest_nextjs_version)
-    print_success "Latest version: $DEFAULT_NEXTJS_VERSION"
+    DEFAULT_PKG_CHOICE=2
+    command_exists pnpm && DEFAULT_PKG_CHOICE=1
 
-    while true; do
-        echo -ne "${CYAN}⚡ Next.js version [${DEFAULT_NEXTJS_VERSION}]: ${NC}"
-        read -r NEXTJS_VERSION
-        NEXTJS_VERSION="${NEXTJS_VERSION:-$DEFAULT_NEXTJS_VERSION}"
-        # Accept any non-empty string (version number or "latest")
-        if [[ -n "$NEXTJS_VERSION" ]]; then
-            break
-        else
-            print_error "Version cannot be empty"
-        fi
-    done
-
-    # --------------------------------------------------
-    # 4. Package manager selection
-    # --------------------------------------------------
     echo -e "${CYAN}📦 Select package manager:${NC}"
-    echo "  1) npm"
-    echo "  2) pnpm"
+    echo "  1) pnpm (recommended)"
+    echo "  2) npm"
     echo "  3) yarn"
     echo "  4) bun"
     while true; do
-        echo -ne "${CYAN}Selection [1]: ${NC}"
+        echo -ne "${CYAN}Selection [${DEFAULT_PKG_CHOICE}]: ${NC}"
         read -r PKG_MANAGER_CHOICE
-        PKG_MANAGER_CHOICE="${PKG_MANAGER_CHOICE:-1}"
+        PKG_MANAGER_CHOICE="${PKG_MANAGER_CHOICE:-$DEFAULT_PKG_CHOICE}"
         case "$PKG_MANAGER_CHOICE" in
-            1|npm)
-                PKG_MANAGER="npm"
-                break
-                ;;
-            2|pnpm)
+            1|pnpm)
                 if ! command_exists pnpm; then
-                    print_error "pnpm is not installed. Run: npm install -g pnpm"
+                    print_error "pnpm is not installed. Install it with: corepack enable"
                     continue
                 fi
                 PKG_MANAGER="pnpm"
                 break
                 ;;
+            2|npm)
+                PKG_MANAGER="npm"
+                break
+                ;;
             3|yarn)
                 if ! command_exists yarn; then
-                    print_error "yarn is not installed. Run: npm install -g yarn"
+                    print_error "yarn is not installed. Install it with: corepack enable"
                     continue
                 fi
                 PKG_MANAGER="yarn"
@@ -382,11 +395,11 @@ main() {
     done
 
     # --------------------------------------------------
-    # 5. Install Prettier
+    # 4. Development tools confirmation
     # --------------------------------------------------
-    echo -ne "${CYAN}🎨 Install Prettier [Y/n]: ${NC}"
-    read -r INSTALL_PRETTIER
-    INSTALL_PRETTIER="${INSTALL_PRETTIER:-Y}"
+    echo -ne "${CYAN}🛠️  Install development tools (eslint, prettier, vitest) [Y/n]: ${NC}"
+    read -r INSTALL_DEV_TOOLS
+    INSTALL_DEV_TOOLS="${INSTALL_DEV_TOOLS:-Y}"
 
     # --------------------------------------------------
     # Configuration summary
@@ -396,160 +409,105 @@ main() {
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Working directory: $(pwd)"
     echo "  Node.js version: $SELECTED_NODE_VERSION"
-    echo "  Next.js version: $NEXTJS_VERSION"
     echo "  Package manager: $PKG_MANAGER"
-    echo "  TypeScript: Yes (recommended)"
-    echo "  ESLint: Yes (recommended)"
-    echo "  Tailwind CSS: Yes (recommended)"
-    echo "  src/ directory: Yes (recommended)"
-    echo "  App Router: Yes (recommended)"
-    echo "  Prettier: $([[ "$INSTALL_PRETTIER" =~ ^[Yy]$ ]] && echo "Yes" || echo "No")"
+    echo "  TypeScript: Yes (tsx for direct script execution)"
+    echo "  Development tools: $([[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install (eslint, prettier, vitest)" || echo "Skip")"
     echo "=================================================="
     echo ""
+
+    # --------------------------------------------------
+    # Detect existing files we should preserve
+    # --------------------------------------------------
+    local has_existing_gitignore=0
+    local has_existing_vscode=0
+    local has_existing_git=0
+    local has_existing_claude_md=0
+    [[ -f ".gitignore" ]] && has_existing_gitignore=1
+    [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
+    [[ -d ".git" ]] && has_existing_git=1
+    [[ -f "CLAUDE.md.temp" ]] && has_existing_claude_md=1
 
     # --------------------------------------------------
     # Start setup
     # --------------------------------------------------
     echo -e "${GREEN}✨ Starting setup...${NC}\n"
 
-    # Determine package manager flag for create-next-app
+    # 1. Initialize package.json (name auto-derived from current dir by npm)
+    print_step "Initializing package.json..."
+    npm init -y >/dev/null
+    print_success "Initialized package.json"
+
+    # 2. Install TypeScript + tsx (run .ts files directly, no build step needed)
+    print_step "Installing TypeScript runtime (typescript, tsx, @types/node)..."
     case "$PKG_MANAGER" in
-        npm)
-            PKG_FLAG=""
-            ;;
-        pnpm)
-            PKG_FLAG="--use-pnpm"
-            ;;
-        yarn)
-            PKG_FLAG="--use-yarn"
-            ;;
-        bun)
-            PKG_FLAG="--use-bun"
-            ;;
+        npm)  npm install --save-dev "typescript@^5" tsx @types/node ;;
+        pnpm) pnpm_install add -D "typescript@^5" tsx @types/node ;;
+        yarn) yarn add -D "typescript@^5" tsx @types/node ;;
+        bun)  bun add -D "typescript@^5" tsx @types/node ;;
     esac
+    print_success "Installed TypeScript runtime"
 
-    # 1. Create Next.js project (in current directory)
-    print_step "Creating Next.js project with recommended settings..."
+    # 3. Generate tsconfig.json
+    print_step "Generating tsconfig.json..."
+    generate_tsconfig > tsconfig.json
+    print_success "Generated tsconfig.json"
 
-    # Determine create-next-app version to use
-    if [[ "$NEXTJS_VERSION" == "latest" ]]; then
-        CNA_VERSION="latest"
-    else
-        CNA_VERSION="$NEXTJS_VERSION"
-    fi
+    # 4. Create src directory with entry stub
+    print_step "Creating src directory..."
+    mkdir -p src
+    [[ ! -f "src/index.ts" ]] && generate_index_ts > src/index.ts
+    print_success "Created src directory"
 
-    # Detect files we should preserve from being overwritten
-    local has_existing_readme=0
-    local has_existing_gitignore=0
-    local has_existing_vscode=0
-    local has_existing_envex=0
-    [[ -f "README.md" ]] && has_existing_readme=1
-    [[ -f ".gitignore" ]] && has_existing_gitignore=1
-    [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
-    [[ -f ".env.example" ]] && has_existing_envex=1
-
-    # Backup files create-next-app might overwrite
-    local cna_backup_dir
-    cna_backup_dir=$(mktemp -d)
-    [[ $has_existing_readme -eq 1 ]] && cp -p README.md "${cna_backup_dir}/README.md"
-    [[ $has_existing_gitignore -eq 1 ]] && cp -p .gitignore "${cna_backup_dir}/.gitignore"
-
-    npx create-next-app@${CNA_VERSION} . \
-        --typescript \
-        --eslint \
-        --tailwind \
-        --src-dir \
-        --app \
-        --import-alias "@/*" \
-        $PKG_FLAG
-
-    # Restore preserved files
-    if [[ $has_existing_readme -eq 1 ]]; then
-        mv "${cna_backup_dir}/README.md" README.md
-        print_warning "Existing README.md preserved"
-    fi
-    if [[ $has_existing_gitignore -eq 1 ]]; then
-        mv "${cna_backup_dir}/.gitignore" .gitignore
-        print_warning "Existing .gitignore preserved"
-    fi
-    rm -rf "$cna_backup_dir"
-
-    print_success "Created Next.js project (Next.js ${NEXTJS_VERSION})"
-
-    # 2. Install Prettier
-    if [[ "$INSTALL_PRETTIER" =~ ^[Yy]$ ]]; then
-        print_step "Installing Prettier..."
+    # 5. Install development tools
+    if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+        print_step "Installing development tools..."
         case "$PKG_MANAGER" in
-            npm)
-                npm install --save-dev prettier eslint-config-prettier
-                ;;
-            pnpm)
-                pnpm add -D prettier eslint-config-prettier
-                ;;
-            yarn)
-                yarn add -D prettier eslint-config-prettier
-                ;;
-            bun)
-                bun add -D prettier eslint-config-prettier
-                ;;
+            npm)  npm install --save-dev eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
+            pnpm) pnpm_install add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
+            yarn) yarn add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
+            bun)  bun add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
         esac
-        print_success "Installed Prettier"
+        print_success "Installed development tools"
 
-        # Generate .prettierrc
+        print_step "Generating eslint.config.mjs..."
+        generate_eslint_config > eslint.config.mjs
+        print_success "Generated eslint.config.mjs"
+
         print_step "Generating .prettierrc..."
         generate_prettier_config > .prettierrc
         print_success "Generated .prettierrc"
-
-        # Update ESLint config to include Prettier
-        print_step "Updating ESLint config..."
-        if [[ -f "eslint.config.mjs" ]]; then
-            # Next.js 15+ uses eslint.config.mjs (flat config)
-            cat > eslint.config.mjs << 'ESLINT_EOF'
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
-];
-
-export default eslintConfig;
-ESLINT_EOF
-        elif [[ -f ".eslintrc.json" ]]; then
-            # Legacy config format
-            cat > .eslintrc.json << 'ESLINT_EOF'
-{
-    "extends": ["next/core-web-vitals", "next/typescript", "prettier"]
-}
-ESLINT_EOF
-        fi
-        print_success "Updated ESLint config"
     fi
 
-    # 3. Generate .gitignore (replace create-next-app default; skip if user already had one)
+    # 6. Add npm scripts to package.json
+    print_step "Updating package.json..."
+    node -e "
+        const fs = require('fs');
+        const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+        pkg.scripts = pkg.scripts || {};
+        pkg.scripts.start = 'tsx src/index.ts';
+        pkg.scripts.build = 'tsc';
+        pkg.scripts.typecheck = 'tsc --noEmit';
+        $( [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "
+        pkg.scripts.lint = 'eslint .';
+        pkg.scripts.format = 'prettier --write .';
+        pkg.scripts.test = 'vitest run';
+        " )
+        $( [[ "$PKG_MANAGER" == "pnpm" || "$PKG_MANAGER" == "yarn" ]] && echo "
+        // Pin the package manager so corepack enforces it for anyone on this project
+        pkg.packageManager = '${PKG_MANAGER}@' + require('child_process').execSync('${PKG_MANAGER} --version').toString().trim();
+        " )
+        fs.writeFileSync('package.json', JSON.stringify(pkg, null, 4) + '\n');
+    "
+    print_success "Updated package.json"
+
+    # 7. Generate .gitignore (only when there is no existing one)
     if [[ $has_existing_gitignore -eq 0 ]]; then
-        print_step "Replacing default .gitignore with project template..."
+        print_step "Generating .gitignore..."
         generate_gitignore > .gitignore
         print_success "Generated .gitignore"
     fi
 
-    # 4. Generate .env.example (skip if existing)
-    if [[ $has_existing_envex -eq 1 ]]; then
-        print_warning "Existing .env.example preserved (skipped)"
-    else
-        print_step "Generating .env.example..."
-        generate_env_example > .env.example
-        print_success "Generated .env.example"
-    fi
-
-    # 5. Generate VS Code settings (skip if existing)
+    # 8. Generate .vscode/settings.json (skip if existing)
     if [[ $has_existing_vscode -eq 1 ]]; then
         print_warning "Existing .vscode/settings.json preserved (skipped)"
     else
@@ -559,14 +517,30 @@ ESLINT_EOF
         print_success "Generated .vscode/settings.json"
     fi
 
-    # 6. Generate .nvmrc / .node-version (if version manager was used)
+    # 9. Generate .nvmrc / .node-version (if version manager was used)
     if [[ "$VERSION_MANAGER" != "none" ]]; then
         print_step "Generating .nvmrc and .node-version..."
-        # .nvmrc for nvm compatibility
         echo "$SELECTED_NODE_VERSION" > .nvmrc
-        # .node-version for fnm and other tools
         echo "$SELECTED_NODE_VERSION" > .node-version
         print_success "Generated .nvmrc and .node-version"
+    fi
+
+    # 10. Create CLAUDE.md.temp (skip if existing)
+    if [[ $has_existing_claude_md -eq 1 ]]; then
+        print_warning "Existing CLAUDE.md.temp preserved (skipped)"
+    else
+        print_step "Creating CLAUDE.md.temp..."
+        cp "${SCRIPT_DIR}/templates/claude/nodejs.template.md" CLAUDE.md.temp
+        print_success "Created CLAUDE.md.temp"
+    fi
+
+    # 11. Initialize Git (skip if existing)
+    if [[ $has_existing_git -eq 1 ]]; then
+        print_warning "Existing .git/ preserved (skipped git init)"
+    else
+        print_step "Initializing Git repository..."
+        git init --quiet
+        print_success "Initialized Git repository"
     fi
 
     # --------------------------------------------------
@@ -583,37 +557,17 @@ ESLINT_EOF
     elif [[ "$VERSION_MANAGER" == "nvm" ]]; then
         echo "  nvm use                # Use project's Node version"
     fi
-    echo "  $PKG_MANAGER run dev"
+    echo "  $PKG_MANAGER run start"
     echo ""
     echo "Useful commands:"
-    case "$PKG_MANAGER" in
-        npm)
-            echo "  npm run dev       # Start development server"
-            echo "  npm run build     # Build for production"
-            echo "  npm run start     # Start production server"
-            echo "  npm run lint      # Run ESLint"
-            ;;
-        pnpm)
-            echo "  pnpm dev          # Start development server"
-            echo "  pnpm build        # Build for production"
-            echo "  pnpm start        # Start production server"
-            echo "  pnpm lint         # Run ESLint"
-            ;;
-        yarn)
-            echo "  yarn dev          # Start development server"
-            echo "  yarn build        # Build for production"
-            echo "  yarn start        # Start production server"
-            echo "  yarn lint         # Run ESLint"
-            ;;
-        bun)
-            echo "  bun run dev       # Start development server"
-            echo "  bun run build     # Build for production"
-            echo "  bun run start     # Start production server"
-            echo "  bun run lint      # Run ESLint"
-            ;;
-    esac
-    echo ""
-    echo "Open in browser: http://localhost:3000"
+    echo "  $PKG_MANAGER run start       # Run src/index.ts directly (tsx)"
+    echo "  $PKG_MANAGER run typecheck   # Type-check without emitting"
+    echo "  $PKG_MANAGER run build       # Compile to dist/"
+    if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+        echo "  $PKG_MANAGER run lint        # Run ESLint"
+        echo "  $PKG_MANAGER run format      # Run Prettier"
+        echo "  $PKG_MANAGER run test        # Run tests (vitest)"
+    fi
     echo ""
 }
 

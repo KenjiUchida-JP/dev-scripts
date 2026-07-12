@@ -55,23 +55,3 @@ check_node_collisions() {
     fi
     return 0
 }
-
-# Fullstack: backend/ and frontend/ subdirs must be absent or empty.
-check_fullstack_collisions() {
-    local found=()
-    if [[ -d "backend" && -n "$(ls -A backend 2>/dev/null)" ]]; then
-        found+=("backend/ (not empty)")
-    fi
-    if [[ -d "frontend" && -n "$(ls -A frontend 2>/dev/null)" ]]; then
-        found+=("frontend/ (not empty)")
-    fi
-
-    if [[ ${#found[@]} -gt 0 ]]; then
-        print_error "Existing fullstack content detected:"
-        for item in "${found[@]}"; do
-            echo -e "  ${RED}- ${item}${NC}" >&2
-        done
-        return 1
-    fi
-    return 0
-}

@@ -29,10 +29,13 @@ if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/ ]] || [[ "${BASH_SOURCE[0]}" =~ ^/proc/se
     mkdir -p "$TEMP_DIR/templates/vscode"
     curl -fsSL "$REPO_BASE/templates/vscode/python.settings.json" -o "$TEMP_DIR/templates/vscode/python.settings.json"
 
+    mkdir -p "$TEMP_DIR/templates/claude"
+    curl -fsSL "$REPO_BASE/templates/claude/python.template.md" -o "$TEMP_DIR/templates/claude/python.template.md"
+
     SCRIPT_DIR="$TEMP_DIR"
 else
-    # Running locally
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Running locally (repo root, one level up from this script's directory)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fi
 
 # --------------------------------------------------
@@ -204,10 +207,12 @@ main() {
     local has_existing_gitignore=0
     local has_existing_vscode=0
     local has_existing_git=0
+    local has_existing_claude_md=0
     [[ -f "README.md" ]] && has_existing_readme=1
     [[ -f ".gitignore" ]] && has_existing_gitignore=1
     [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
     [[ -d ".git" ]] && has_existing_git=1
+    [[ -f "CLAUDE.md.temp" ]] && has_existing_claude_md=1
 
     # --------------------------------------------------
     # Start setup
@@ -310,7 +315,16 @@ CONFTEST_EOF
         print_success "Created .vscode/settings.json"
     fi
 
-    # 10. Initialize Git (skip if existing)
+    # 10. Create CLAUDE.md.temp (skip if existing)
+    if [[ $has_existing_claude_md -eq 1 ]]; then
+        print_warning "Existing CLAUDE.md.temp preserved (skipped)"
+    else
+        print_step "Creating CLAUDE.md.temp..."
+        cp "${SCRIPT_DIR}/templates/claude/python.template.md" CLAUDE.md.temp
+        print_success "Created CLAUDE.md.temp"
+    fi
+
+    # 11. Initialize Git (skip if existing)
     if [[ $has_existing_git -eq 1 ]]; then
         print_warning "Existing .git/ preserved (skipped git init)"
     else
