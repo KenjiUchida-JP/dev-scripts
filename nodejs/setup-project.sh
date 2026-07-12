@@ -426,17 +426,19 @@ main() {
     print_success "Initialized package.json"
 
     # pnpm ignores dependency build scripts by default (supply-chain safety).
-    # esbuild (pulled in by tsx/vitest) relies on its postinstall to fetch its
-    # native binary, so pre-approve it before any install runs the script.
-    # As of pnpm 10+, this setting lives in pnpm-workspace.yaml, not
-    # package.json's "pnpm" field (which pnpm silently stops reading).
+    # esbuild (pulled in by tsx) relies on its postinstall to fetch its native
+    # binary, so pre-approve it before any install runs the script. As of
+    # pnpm 10+, this lives in pnpm-workspace.yaml under "allowBuilds" (a
+    # package-name -> boolean map) — "onlyBuiltDependencies" no longer
+    # triggers the build to actually run, and package.json's "pnpm" field is
+    # no longer read at all.
     if [[ "$PKG_MANAGER" == "pnpm" ]]; then
-        if [[ -f "pnpm-workspace.yaml" ]] && grep -q "^onlyBuiltDependencies:" pnpm-workspace.yaml; then
-            grep -q "esbuild" pnpm-workspace.yaml || sed -i '/^onlyBuiltDependencies:/a\  - esbuild' pnpm-workspace.yaml
+        if [[ -f "pnpm-workspace.yaml" ]] && grep -q "^allowBuilds:" pnpm-workspace.yaml; then
+            grep -q "esbuild:" pnpm-workspace.yaml || sed -i '/^allowBuilds:/a\  esbuild: true' pnpm-workspace.yaml
         elif [[ -f "pnpm-workspace.yaml" ]]; then
-            printf 'onlyBuiltDependencies:\n  - esbuild\n' >> pnpm-workspace.yaml
+            printf 'allowBuilds:\n  esbuild: true\n' >> pnpm-workspace.yaml
         else
-            printf 'onlyBuiltDependencies:\n  - esbuild\n' > pnpm-workspace.yaml
+            printf 'allowBuilds:\n  esbuild: true\n' > pnpm-workspace.yaml
         fi
     fi
 
