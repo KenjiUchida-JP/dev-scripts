@@ -428,17 +428,16 @@ main() {
     # pnpm ignores dependency build scripts by default (supply-chain safety).
     # esbuild (pulled in by tsx/vitest) relies on its postinstall to fetch its
     # native binary, so pre-approve it before any install runs the script.
+    # As of pnpm 10+, this setting lives in pnpm-workspace.yaml, not
+    # package.json's "pnpm" field (which pnpm silently stops reading).
     if [[ "$PKG_MANAGER" == "pnpm" ]]; then
-        node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.pnpm = pkg.pnpm || {};
-            pkg.pnpm.onlyBuiltDependencies = pkg.pnpm.onlyBuiltDependencies || [];
-            if (!pkg.pnpm.onlyBuiltDependencies.includes('esbuild')) {
-                pkg.pnpm.onlyBuiltDependencies.push('esbuild');
-            }
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 4) + '\n');
-        "
+        if [[ -f "pnpm-workspace.yaml" ]] && grep -q "^onlyBuiltDependencies:" pnpm-workspace.yaml; then
+            grep -q "esbuild" pnpm-workspace.yaml || sed -i '/^onlyBuiltDependencies:/a\  - esbuild' pnpm-workspace.yaml
+        elif [[ -f "pnpm-workspace.yaml" ]]; then
+            printf 'onlyBuiltDependencies:\n  - esbuild\n' >> pnpm-workspace.yaml
+        else
+            printf 'onlyBuiltDependencies:\n  - esbuild\n' > pnpm-workspace.yaml
+        fi
     fi
 
     # 2. Install TypeScript + tsx (run .ts files directly, no build step needed)
