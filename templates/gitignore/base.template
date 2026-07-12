@@ -12,14 +12,19 @@
 .env.dev
 .env.test
 *.pem
+*.key
 
 # --------------------------------------------------
 # IDE / Editor
+# Shared settings (.vscode/settings.json, .claude/settings.json) are
+# intentionally NOT ignored — only personal/local overrides are.
 # --------------------------------------------------
 .idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.claude/settings.local.json
 .cursor/
-.claude/
-.vscode/
 *.swp
 *.swo
 *~
@@ -28,4 +33,16 @@
 # OS Generated
 # --------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --------------------------------------------------
+# Logs
+# --------------------------------------------------
+*.log
+logs/

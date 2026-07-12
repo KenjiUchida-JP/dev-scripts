@@ -48,7 +48,6 @@ validate_python_version "3.12.0"       # Returns 0 if valid, 1 if invalid
 
 check_python_collisions                # Returns 0 if clean, 1 if Python project files exist
 check_node_collisions                  # Returns 0 if clean, 1 if Node.js project files exist
-check_fullstack_collisions             # Returns 0 if backend/ and frontend/ are empty/absent
 ```
 
 **Validation Rules:**
@@ -94,7 +93,7 @@ Gets the path to the gitignore templates directory.
 #### build_gitignore_single
 ```bash
 build_gitignore_single "$TEMPLATES_DIR" "python"
-build_gitignore_single "$TEMPLATES_DIR" "nextjs"
+build_gitignore_single "$TEMPLATES_DIR" "nodejs"
 ```
 
 Builds `.gitignore` for single-language projects by concatenating:
@@ -112,45 +111,14 @@ __pycache__/
 .venv/
 ```
 
-#### build_gitignore_fullstack
-```bash
-build_gitignore_fullstack "$TEMPLATES_DIR" "python" "nextjs"
-```
-
-Builds `.gitignore` for fullstack projects with path prefixes:
-- `python` patterns → `backend/` prefix
-- `nextjs` patterns → `frontend/` prefix
-
-**Output format:**
-```
-# Base template content (no prefix)
-.DS_Store
-.env
-
-# --------------------------------------------------
-# Backend (python)
-# --------------------------------------------------
-backend/__pycache__/
-backend/.venv/
-
-# --------------------------------------------------
-# Frontend (nextjs)
-# --------------------------------------------------
-frontend/.next/
-frontend/node_modules/
-```
-
 **Usage:**
 ```bash
 source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
 
 TEMPLATES_DIR=$(get_templates_dir "$SCRIPT_DIR")
 
-# Single language
 build_gitignore_single "$TEMPLATES_DIR" "python" > .gitignore
-
-# Fullstack
-build_gitignore_fullstack "$TEMPLATES_DIR" "python" "nextjs" > .gitignore
+build_gitignore_single "$TEMPLATES_DIR" "nodejs" > .gitignore
 ```
 
 ## Usage in Setup Scripts
@@ -201,33 +169,6 @@ main() {
         build_gitignore_single "$TEMPLATES_DIR" "python" > .gitignore
         print_success ".gitignore created"
     fi
-}
-
-main "$@"
-```
-
-### Example: Fullstack Setup Script
-
-```bash
-#!/usr/bin/env bash
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-source "${SCRIPT_DIR}/../scripts/lib/colors.sh"
-source "${SCRIPT_DIR}/../scripts/lib/validators.sh"
-source "${SCRIPT_DIR}/../scripts/lib/gitignore-builder.sh"
-
-main() {
-    print_header "Fullstack Project Setup"
-
-    # ... project setup ...
-
-    # Generate .gitignore with path prefixes
-    print_step "Creating .gitignore..."
-    TEMPLATES_DIR=$(get_templates_dir "$SCRIPT_DIR")
-    build_gitignore_fullstack "$TEMPLATES_DIR" "python" "nextjs" > .gitignore
-    print_success ".gitignore created"
 }
 
 main "$@"
@@ -308,6 +249,5 @@ bash /path/to/dev-scripts/python/setup-project.sh
 
 - [Main README](../../README.md) - Project overview
 - [Templates](../../templates/README.md) - Template system
-- [Python Setup](../../python/README.md) - Python setup script
-- [Next.js Setup](../../nextjs/README.md) - Next.js setup script
-- [Fullstack Setup](../../fullstack/README.md) - Fullstack setup script
+- [Python Setup](../../python/setup-project.sh) - Python setup script
+- [Node.js Setup](../../nodejs/setup-project.sh) - Node.js setup script

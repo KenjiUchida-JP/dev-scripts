@@ -8,12 +8,14 @@ This directory contains centralized templates used by all setup scripts.
 templates/
 ├── gitignore/                      # Modular .gitignore templates
 │   ├── base.template               # Common patterns (IDE, OS, env vars)
-│   ├── python.template             # Python-specific patterns
-│   └── nextjs.template             # Next.js-specific patterns
-└── vscode/                         # VS Code settings templates
-    ├── python.settings.json        # Python development settings
-    ├── nextjs.settings.json        # Next.js development settings
-    └── fullstack.settings.json     # Merged settings for fullstack projects
+│   ├── python.template              # Python-specific patterns
+│   └── nodejs.template             # Node.js-specific patterns
+├── vscode/                         # VS Code settings templates
+│   ├── python.settings.json        # Python development settings
+│   └── nodejs.settings.json        # Node.js/TypeScript development settings
+└── claude/                         # CLAUDE.md.temp templates (Claude Code guidance)
+    ├── python.template.md          # Python project conventions
+    └── nodejs.template.md          # Node.js project conventions
 ```
 
 ## Usage
@@ -23,12 +25,8 @@ templates/
 Templates are composed using `scripts/lib/gitignore-builder.sh`:
 
 ```bash
-# Single language
 build_gitignore_single "$templates_dir" "python"  # Python project
-build_gitignore_single "$templates_dir" "nextjs"  # Next.js project
-
-# Fullstack with path prefixes (python → backend/, nextjs → frontend/)
-build_gitignore_fullstack "$templates_dir" "python" "nextjs"
+build_gitignore_single "$templates_dir" "nodejs"  # Node.js project
 ```
 
 **Template Composition Rules:**
@@ -39,14 +37,20 @@ build_gitignore_fullstack "$templates_dir" "python" "nextjs"
 
 ### VS Code Settings Templates
 
-Settings are merged using `jq` for fullstack projects:
+```bash
+cp templates/vscode/python.settings.json .vscode/settings.json
+# or
+cp templates/vscode/nodejs.settings.json .vscode/settings.json
+```
+
+### CLAUDE.md.temp Templates
+
+Copied as-is into the project root (skipped if `CLAUDE.md.temp` already exists), so Claude Code picks up the right conventions (how to run scripts, add packages, which lockfile to commit) for whichever environment was set up:
 
 ```bash
-# Single language
-cp templates/vscode/python.settings.json .vscode/settings.json
-
-# Fullstack (merged)
-cp templates/vscode/fullstack.settings.json .vscode/settings.json
+cp templates/claude/python.template.md CLAUDE.md.temp
+# or
+cp templates/claude/nodejs.template.md CLAUDE.md.temp
 ```
 
 ## Maintenance
