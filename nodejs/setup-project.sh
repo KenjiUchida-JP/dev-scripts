@@ -113,10 +113,11 @@ get_fnm_lts_version() {
 }
 
 # --------------------------------------------------
-# pnpm blocks dependency lifecycle scripts by default (supply-chain safety)
-# and exits non-zero when a package's build gets skipped as a result (e.g.
-# esbuild's postinstall). Auto-approve so the script neither aborts under
-# `set -e` nor silently leaves those packages half-installed.
+# pnpm blocks dependency lifecycle scripts by default (supply-chain safety).
+# esbuild is pre-approved via package.json's pnpm.onlyBuiltDependencies before
+# install runs, but pnpm sometimes still exits non-zero for other packages'
+# skipped builds — auto-approve those as a fallback so the script doesn't
+# abort under `set -e` or leave packages half-installed.
 # --------------------------------------------------
 pnpm_install() {
     if ! pnpm "$@"; then
@@ -436,6 +437,22 @@ main() {
     print_step "Initializing package.json..."
     npm init -y >/dev/null
     print_success "Initialized package.json"
+
+    # pnpm ignores dependency build scripts by default (supply-chain safety).
+    # esbuild (pulled in by tsx/vitest) relies on its postinstall to fetch its
+    # native binary, so pre-approve it before any install runs the script.
+    if [[ "$PKG_MANAGER" == "pnpm" ]]; then
+        node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.pnpm = pkg.pnpm || {};
+            pkg.pnpm.onlyBuiltDependencies = pkg.pnpm.onlyBuiltDependencies || [];
+            if (!pkg.pnpm.onlyBuiltDependencies.includes('esbuild')) {
+                pkg.pnpm.onlyBuiltDependencies.push('esbuild');
+            }
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 4) + '\n');
+        "
+    fi
 
     # 2. Install TypeScript + tsx (run .ts files directly, no build step needed)
     print_step "Installing TypeScript runtime (typescript, tsx, @types/node)..."
