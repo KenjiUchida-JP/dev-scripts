@@ -113,19 +113,6 @@ get_fnm_lts_version() {
 }
 
 # --------------------------------------------------
-# pnpm blocks dependency lifecycle scripts by default (supply-chain safety).
-# esbuild is pre-approved via package.json's pnpm.onlyBuiltDependencies before
-# install runs, but pnpm sometimes still exits non-zero for other packages'
-# skipped builds — auto-approve those as a fallback so the script doesn't
-# abort under `set -e` or leave packages half-installed.
-# --------------------------------------------------
-pnpm_install() {
-    if ! pnpm "$@"; then
-        pnpm approve-builds --all
-    fi
-}
-
-# --------------------------------------------------
 # .gitignore generation function
 # --------------------------------------------------
 generate_gitignore() {
@@ -458,7 +445,7 @@ main() {
     print_step "Installing TypeScript runtime (typescript, tsx, @types/node)..."
     case "$PKG_MANAGER" in
         npm)  npm install --save-dev "typescript@^5" tsx @types/node ;;
-        pnpm) pnpm_install add -D "typescript@^5" tsx @types/node ;;
+        pnpm) pnpm add -D "typescript@^5" tsx @types/node ;;
         yarn) yarn add -D "typescript@^5" tsx @types/node ;;
         bun)  bun add -D "typescript@^5" tsx @types/node ;;
     esac
@@ -480,7 +467,7 @@ main() {
         print_step "Installing development tools..."
         case "$PKG_MANAGER" in
             npm)  npm install --save-dev eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
-            pnpm) pnpm_install add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
+            pnpm) pnpm add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
             yarn) yarn add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
             bun)  bun add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
         esac
