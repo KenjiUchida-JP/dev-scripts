@@ -299,7 +299,7 @@ CONFTEST_EOF
         print_warning "Existing .git/ preserved (skipped git init)"
     else
         print_step "Initializing Git repository..."
-        git init --quiet
+        git init --quiet -b main
         print_success "Initialized Git repository"
     fi
 

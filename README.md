@@ -65,6 +65,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
   - `.vscode/settings.json`
   - `CLAUDE.md.temp`
   - `.git/` (skips `git init`)
+- When Git is initialized, the default branch is always `main` (`git init -b main`), regardless of the local machine's `init.defaultBranch` setting.
 
 ### Python Environment
 

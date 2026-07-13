@@ -65,6 +65,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
   - `.vscode/settings.json`
   - `CLAUDE.md.temp`
   - `.git/`（既存があれば `git init` をスキップ）
+- Git を初期化する際のデフォルトブランチは、実行環境の `init.defaultBranch` 設定に関係なく常に `main`（`git init -b main`）です。
 
 ### Python 環境
 
