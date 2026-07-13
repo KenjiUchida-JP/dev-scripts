@@ -12,10 +12,15 @@
 
 ### Python 環境
 
-プロジェクトディレクトリでセットアップを実行：
+プロジェクトディレクトリがまだない場合：
 
 ```bash
 mkdir my-project && cd my-project
+```
+
+プロジェクトディレクトリでセットアップを実行：
+
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/python/setup-project.sh)
 ```
 
@@ -27,8 +32,15 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### Node.js 環境
 
+プロジェクトディレクトリがまだない場合：
+
 ```bash
 mkdir my-scripts && cd my-scripts
+```
+
+プロジェクトディレクトリでセットアップを実行：
+
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/nodejs/setup-project.sh)
 ```
 

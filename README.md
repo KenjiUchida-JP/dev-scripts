@@ -12,10 +12,15 @@ All scripts run **in the current directory** — `cd` into the target project fo
 
 ### Python Environment
 
-Run the setup in your project directory:
+If you don't have a project directory yet:
 
 ```bash
 mkdir my-project && cd my-project
+```
+
+Run the setup in your project directory:
+
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/python/setup-project.sh)
 ```
 
@@ -27,8 +32,15 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### Node.js Environment
 
+If you don't have a project directory yet:
+
 ```bash
 mkdir my-scripts && cd my-scripts
+```
+
+Run the setup in your project directory:
+
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/nodejs/setup-project.sh)
 ```
 
