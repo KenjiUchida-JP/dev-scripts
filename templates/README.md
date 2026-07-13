@@ -12,10 +12,12 @@ templates/
 │   └── nodejs.template             # Node.js-specific patterns
 ├── vscode/                         # VS Code settings templates
 │   ├── python.settings.json        # Python development settings
-│   └── nodejs.settings.json        # Node.js/TypeScript development settings
+│   ├── nodejs.settings.json        # Node.js/TypeScript development settings
+│   └── fullstack.settings.json     # Merged Python + Node.js settings
 └── claude/                         # CLAUDE.md.temp templates (Claude Code guidance)
     ├── python.template.md          # Python project conventions
-    └── nodejs.template.md          # Node.js project conventions
+    ├── nodejs.template.md          # Node.js project conventions
+    └── fullstack.template.md       # Merged Python + Node.js project conventions
 ```
 
 ## Usage
@@ -27,6 +29,7 @@ Templates are composed using `scripts/lib/gitignore-builder.sh`:
 ```bash
 build_gitignore_single "$templates_dir" "python"  # Python project
 build_gitignore_single "$templates_dir" "nodejs"  # Node.js project
+build_gitignore_combined "$templates_dir"         # Python + Node.js project
 ```
 
 **Template Composition Rules:**
@@ -34,6 +37,7 @@ build_gitignore_single "$templates_dir" "nodejs"  # Node.js project
 2. Language-specific templates are appended
 3. Blank lines between sections for readability
 4. Comments preserved from source templates
+5. `build_gitignore_combined` additionally dedupes ignore patterns that appear in both `python.template` and `nodejs.template` (e.g. `tmp/`), while always keeping comments/blank lines so both templates' section headers stay intact
 
 ### VS Code Settings Templates
 
@@ -41,7 +45,11 @@ build_gitignore_single "$templates_dir" "nodejs"  # Node.js project
 cp templates/vscode/python.settings.json .vscode/settings.json
 # or
 cp templates/vscode/nodejs.settings.json .vscode/settings.json
+# or (Python + Node.js project)
+cp templates/vscode/fullstack.settings.json .vscode/settings.json
 ```
+
+`fullstack.settings.json` is maintained as a static, manually-merged file rather than being generated at runtime — it has no overlapping keys with either single-language template, so a plain union is safe and needs no JSON-merging dependency (e.g. `jq`).
 
 ### CLAUDE.md.temp Templates
 
@@ -51,7 +59,11 @@ Copied as-is into the project root (skipped if `CLAUDE.md.temp` already exists),
 cp templates/claude/python.template.md CLAUDE.md.temp
 # or
 cp templates/claude/nodejs.template.md CLAUDE.md.temp
+# or (Python + Node.js project)
+cp templates/claude/fullstack.template.md CLAUDE.md.temp
 ```
+
+`fullstack.template.md` is likewise a static file merging both languages' sections under one `## 開発環境` header, rather than being stitched together programmatically.
 
 ## Maintenance
 
@@ -70,3 +82,8 @@ Setup scripts read these templates directly at runtime, so edits take effect imm
 1. **Single Source of Truth**: All templates in one place
 2. **Composability**: Mix and match templates for different project types
 3. **DRY**: Common patterns defined once in `base.template`
+
+## Related Documentation
+
+- [Main README](../README.md) - Project overview, including the `fullstack/setup-project.sh` combined mode
+- [Shared Library Functions](../scripts/lib/README.md) - `gitignore-builder.sh`, version-detection helpers, etc.

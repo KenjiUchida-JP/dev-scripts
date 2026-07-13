@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ==================================================
-# Node.js Project Setup Script
-# Sets up a local Node.js + TypeScript runtime environment
-# (no application framework — for running scripts, not building apps)
+# Full-stack Project Setup Script
+# Sets up both a Python (uv) and a Node.js + TypeScript
+# runtime environment in the same directory, with merged
+# .gitignore / .vscode/settings.json / CLAUDE.md.temp
 # ==================================================
 
 set -e
@@ -21,18 +22,20 @@ if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/ ]] || [[ "${BASH_SOURCE[0]}" =~ ^/proc/se
     curl -fsSL "$REPO_BASE/scripts/lib/colors.sh" -o "$TEMP_DIR/scripts/lib/colors.sh"
     curl -fsSL "$REPO_BASE/scripts/lib/validators.sh" -o "$TEMP_DIR/scripts/lib/validators.sh"
     curl -fsSL "$REPO_BASE/scripts/lib/gitignore-builder.sh" -o "$TEMP_DIR/scripts/lib/gitignore-builder.sh"
+    curl -fsSL "$REPO_BASE/scripts/lib/python-version.sh" -o "$TEMP_DIR/scripts/lib/python-version.sh"
     curl -fsSL "$REPO_BASE/scripts/lib/node-version.sh" -o "$TEMP_DIR/scripts/lib/node-version.sh"
 
     # Download template files
     mkdir -p "$TEMP_DIR/templates/gitignore"
     curl -fsSL "$REPO_BASE/templates/gitignore/base.template" -o "$TEMP_DIR/templates/gitignore/base.template"
+    curl -fsSL "$REPO_BASE/templates/gitignore/python.template" -o "$TEMP_DIR/templates/gitignore/python.template"
     curl -fsSL "$REPO_BASE/templates/gitignore/nodejs.template" -o "$TEMP_DIR/templates/gitignore/nodejs.template"
 
     mkdir -p "$TEMP_DIR/templates/vscode"
-    curl -fsSL "$REPO_BASE/templates/vscode/nodejs.settings.json" -o "$TEMP_DIR/templates/vscode/nodejs.settings.json"
+    curl -fsSL "$REPO_BASE/templates/vscode/fullstack.settings.json" -o "$TEMP_DIR/templates/vscode/fullstack.settings.json"
 
     mkdir -p "$TEMP_DIR/templates/claude"
-    curl -fsSL "$REPO_BASE/templates/claude/nodejs.template.md" -o "$TEMP_DIR/templates/claude/nodejs.template.md"
+    curl -fsSL "$REPO_BASE/templates/claude/fullstack.template.md" -o "$TEMP_DIR/templates/claude/fullstack.template.md"
 
     SCRIPT_DIR="$TEMP_DIR"
 else
@@ -46,29 +49,53 @@ fi
 source "${SCRIPT_DIR}/scripts/lib/colors.sh"
 source "${SCRIPT_DIR}/scripts/lib/validators.sh"
 source "${SCRIPT_DIR}/scripts/lib/gitignore-builder.sh"
+source "${SCRIPT_DIR}/scripts/lib/python-version.sh"
 source "${SCRIPT_DIR}/scripts/lib/node-version.sh"
 
 # --------------------------------------------------
-# Custom header for Node.js projects
+# Custom header
 # --------------------------------------------------
-print_nodejs_header() {
-    echo -e "\n${CYAN}⬢ Node.js Project Setup${NC}"
+print_fullstack_header() {
+    echo -e "\n${CYAN}🐍⬢ Full-stack (Python + Node.js) Project Setup${NC}"
     echo "=================================================="
 }
 
 # --------------------------------------------------
-# .gitignore generation function
+# .gitignore generation function (merged)
 # --------------------------------------------------
 generate_gitignore() {
     local templates_dir="${SCRIPT_DIR}/templates/gitignore"
-    build_gitignore_single "$templates_dir" "nodejs"
+    build_gitignore_combined "$templates_dir"
 }
 
 # --------------------------------------------------
-# Generate VS Code settings
+# Append tool configuration to pyproject.toml
 # --------------------------------------------------
-generate_vscode_settings() {
-    cat "${SCRIPT_DIR}/templates/vscode/nodejs.settings.json"
+append_tool_config() {
+    local pyproject_file="$1"
+    local py_version="$2"
+    local major_minor="$3"
+
+    cat >> "$pyproject_file" << TOML_EOF
+
+# --------------------------------------------------
+# Tool Configuration
+# --------------------------------------------------
+
+[tool.ruff]
+target-version = "${py_version}"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "RUF"]
+
+[tool.mypy]
+python_version = "${major_minor}"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+TOML_EOF
 }
 
 # --------------------------------------------------
@@ -148,22 +175,70 @@ INDEX_EOF
 # Main process
 # --------------------------------------------------
 main() {
-    print_nodejs_header
+    print_fullstack_header
 
     # --------------------------------------------------
-    # 0. Fatal collision check (current directory)
+    # 1. Fatal collision check (current directory)
     # --------------------------------------------------
-    if ! check_node_collisions; then
-        print_error "Existing Node.js project files detected. Aborting to protect them."
+    local collisions_ok=1
+    check_python_collisions || collisions_ok=0
+    check_node_collisions || collisions_ok=0
+    if [[ $collisions_ok -eq 0 ]]; then
+        print_error "Existing Python and/or Node.js project files detected. Aborting to protect them."
         exit 1
     fi
 
-    # --------------------------------------------------
-    # 1. Check prerequisites and version managers
-    # --------------------------------------------------
-    print_step "Checking prerequisites..."
+    # ==================================================
+    # Python configuration
+    # ==================================================
+    echo -e "\n${YELLOW}--- Python configuration ---${NC}"
 
-    # Detect version manager: fnm > nvm > system
+    print_step "Checking latest available Python version..."
+    DEFAULT_PYTHON_VERSION=$(get_latest_python_version)
+    print_success "Latest version: $DEFAULT_PYTHON_VERSION"
+
+    while true; do
+        echo -ne "${CYAN}🔢 Python version [${DEFAULT_PYTHON_VERSION}]: ${NC}"
+        read -r PYTHON_VERSION
+        PYTHON_VERSION="${PYTHON_VERSION:-$DEFAULT_PYTHON_VERSION}"
+        if validate_version "$PYTHON_VERSION"; then
+            break
+        else
+            print_error "Invalid version format. Example: 3.13, 3.14.2"
+        fi
+    done
+
+    echo -e "${CYAN}📁 Select Python project type:${NC}"
+    echo "  1) app - Application"
+    echo "  2) lib - Library"
+    while true; do
+        echo -ne "${CYAN}Selection [1]: ${NC}"
+        read -r PROJECT_TYPE_CHOICE
+        PROJECT_TYPE_CHOICE="${PROJECT_TYPE_CHOICE:-1}"
+        case "$PROJECT_TYPE_CHOICE" in
+            1|app)
+                PROJECT_TYPE="app"
+                break
+                ;;
+            2|lib)
+                PROJECT_TYPE="lib"
+                break
+                ;;
+            *)
+                print_error "Please enter 1 or 2."
+                ;;
+        esac
+    done
+
+    echo -ne "${CYAN}🛠️  Install Python dev tools (ruff, mypy, pytest) [Y/n]: ${NC}"
+    read -r INSTALL_PY_DEV_TOOLS
+    INSTALL_PY_DEV_TOOLS="${INSTALL_PY_DEV_TOOLS:-Y}"
+
+    # ==================================================
+    # Node.js configuration
+    # ==================================================
+    echo -e "\n${YELLOW}--- Node.js configuration ---${NC}"
+
     VERSION_MANAGER="none"
     SELECTED_NODE_VERSION=""
 
@@ -180,13 +255,9 @@ main() {
         exit 1
     fi
 
-    # --------------------------------------------------
-    # 2. Node.js version selection (if version manager available)
-    # --------------------------------------------------
     if [[ "$VERSION_MANAGER" != "none" ]]; then
         echo -e "${CYAN}🔢 Select Node.js version (using ${VERSION_MANAGER}):${NC}"
 
-        # Get installed versions based on version manager
         if [[ "$VERSION_MANAGER" == "fnm" ]]; then
             INSTALLED_VERSIONS=($(get_fnm_versions))
         else
@@ -213,7 +284,6 @@ main() {
                         SELECTED_NODE_VERSION="${INSTALLED_VERSIONS[$((NODE_VERSION_CHOICE-1))]}"
                         break
                     elif [[ "$NODE_VERSION_CHOICE" -eq "$INSTALL_NEW_OPTION" ]]; then
-                        # Install new version
                         print_step "Fetching available LTS version..."
                         if [[ "$VERSION_MANAGER" == "fnm" ]]; then
                             LTS_VERSION=$(get_fnm_lts_version)
@@ -237,7 +307,6 @@ main() {
                 print_error "Invalid selection."
             done
         else
-            # No versions installed
             print_warning "No Node.js versions installed via ${VERSION_MANAGER}."
             print_step "Fetching available LTS version..."
             if [[ "$VERSION_MANAGER" == "fnm" ]]; then
@@ -258,7 +327,6 @@ main() {
             SELECTED_NODE_VERSION="$NEW_VERSION"
         fi
 
-        # Switch to selected version
         print_step "Switching to Node.js ${SELECTED_NODE_VERSION}..."
         if [[ "$VERSION_MANAGER" == "fnm" ]]; then
             fnm use "$SELECTED_NODE_VERSION"
@@ -267,7 +335,6 @@ main() {
         fi
         print_success "Using Node.js ${SELECTED_NODE_VERSION}"
     else
-        # No version manager available, use system Node
         if ! command_exists npm; then
             print_error "npm is not installed. Please install npm first."
             exit 1
@@ -276,9 +343,6 @@ main() {
         print_success "Node.js ${SELECTED_NODE_VERSION} found (system)"
     fi
 
-    # --------------------------------------------------
-    # 3. Package manager selection (pnpm preferred by default)
-    # --------------------------------------------------
     DEFAULT_PKG_CHOICE=2
     command_exists pnpm && DEFAULT_PKG_CHOICE=1
 
@@ -326,12 +390,9 @@ main() {
         esac
     done
 
-    # --------------------------------------------------
-    # 4. Development tools confirmation
-    # --------------------------------------------------
-    echo -ne "${CYAN}🛠️  Install development tools (eslint, prettier, vitest) [Y/n]: ${NC}"
-    read -r INSTALL_DEV_TOOLS
-    INSTALL_DEV_TOOLS="${INSTALL_DEV_TOOLS:-Y}"
+    echo -ne "${CYAN}🛠️  Install Node.js dev tools (eslint, prettier, vitest) [Y/n]: ${NC}"
+    read -r INSTALL_NODE_DEV_TOOLS
+    INSTALL_NODE_DEV_TOOLS="${INSTALL_NODE_DEV_TOOLS:-Y}"
 
     # --------------------------------------------------
     # Configuration summary
@@ -340,20 +401,24 @@ main() {
     echo "=================================================="
     echo -e "${YELLOW}Configuration:${NC}"
     echo "  Working directory: $(pwd)"
+    echo "  Python version: $PYTHON_VERSION"
+    echo "  Python project type: $PROJECT_TYPE"
+    echo "  Python dev tools: $([[ "$INSTALL_PY_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install" || echo "Skip")"
     echo "  Node.js version: $SELECTED_NODE_VERSION"
     echo "  Package manager: $PKG_MANAGER"
-    echo "  TypeScript: Yes (tsx for direct script execution)"
-    echo "  Development tools: $([[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install (eslint, prettier, vitest)" || echo "Skip")"
+    echo "  Node.js dev tools: $([[ "$INSTALL_NODE_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "Install (eslint, prettier, vitest)" || echo "Skip")"
     echo "=================================================="
     echo ""
 
     # --------------------------------------------------
     # Detect existing files we should preserve
     # --------------------------------------------------
+    local has_existing_readme=0
     local has_existing_gitignore=0
     local has_existing_vscode=0
     local has_existing_git=0
     local has_existing_claude_md=0
+    [[ -f "README.md" ]] && has_existing_readme=1
     [[ -f ".gitignore" ]] && has_existing_gitignore=1
     [[ -f ".vscode/settings.json" ]] && has_existing_vscode=1
     [[ -d ".git" ]] && has_existing_git=1
@@ -364,7 +429,85 @@ main() {
     # --------------------------------------------------
     echo -e "${GREEN}✨ Starting setup...${NC}\n"
 
-    # 1. Initialize package.json (name auto-derived from current dir by npm)
+    # 1. Install Python
+    print_step "Installing Python $PYTHON_VERSION..."
+    uv python install "$PYTHON_VERSION"
+    print_success "Installed Python $PYTHON_VERSION"
+
+    # 2. Initialize Python project (project name auto-derived from dir)
+    print_step "Initializing Python project..."
+    local uv_init_args=(--python "$PYTHON_VERSION" "--$PROJECT_TYPE")
+    [[ $has_existing_readme -eq 1 ]] && uv_init_args+=(--no-readme)
+
+    # Backup .gitignore in case `uv init` regenerates it
+    local gitignore_backup=""
+    if [[ $has_existing_gitignore -eq 1 ]]; then
+        gitignore_backup=$(mktemp)
+        cp .gitignore "$gitignore_backup"
+    fi
+
+    uv init "${uv_init_args[@]}"
+
+    if [[ $has_existing_gitignore -eq 1 ]]; then
+        mv "$gitignore_backup" .gitignore
+        print_warning "Existing .gitignore preserved (skipped regeneration)"
+    fi
+    print_success "Initialized Python project"
+
+    # 3. Install Python dev tools
+    if [[ "$INSTALL_PY_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+        print_step "Installing Python dev tools..."
+        uv add --dev ruff mypy pytest
+        print_success "Installed Python dev tools"
+    fi
+
+    # 4. Sync Python dependencies
+    print_step "Syncing Python dependencies..."
+    uv sync
+    print_success "Synced Python dependencies"
+
+    # 5. Append tool configuration to pyproject.toml
+    if [[ "$INSTALL_PY_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+        print_step "Appending tool configuration to pyproject.toml..."
+        local py_version
+        local major_minor
+        py_version=$(get_py_version "$PYTHON_VERSION")
+        major_minor=$(get_major_minor "$PYTHON_VERSION")
+        append_tool_config "pyproject.toml" "$py_version" "$major_minor"
+        print_success "Appended tool configuration"
+    fi
+
+    # 6. Create src directory (shared by Python and Node.js)
+    print_step "Creating src directory..."
+    mkdir -p src
+    [[ ! -f "src/__init__.py" ]] && touch src/__init__.py
+    print_success "Created src directory"
+
+    # 7. Create tests directory with conftest.py
+    if [[ "$INSTALL_PY_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+        print_step "Creating tests directory..."
+        mkdir -p tests
+        [[ ! -f "tests/__init__.py" ]] && touch tests/__init__.py
+        if [[ ! -f "tests/conftest.py" ]]; then
+            cat > tests/conftest.py << 'CONFTEST_EOF'
+"""
+pytest configuration file
+
+Add src directory to Python path so that tests can import src modules.
+"""
+
+import sys
+from pathlib import Path
+
+# Add project root to sys.path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+CONFTEST_EOF
+        fi
+        print_success "Created tests directory with conftest.py"
+    fi
+
+    # 8. Initialize package.json (name auto-derived from current dir by npm)
     print_step "Initializing package.json..."
     npm init -y >/dev/null
     print_success "Initialized package.json"
@@ -373,9 +516,7 @@ main() {
     # esbuild (pulled in by tsx) relies on its postinstall to fetch its native
     # binary, so pre-approve it before any install runs the script. As of
     # pnpm 10+, this lives in pnpm-workspace.yaml under "allowBuilds" (a
-    # package-name -> boolean map) — "onlyBuiltDependencies" no longer
-    # triggers the build to actually run, and package.json's "pnpm" field is
-    # no longer read at all.
+    # package-name -> boolean map).
     if [[ "$PKG_MANAGER" == "pnpm" ]]; then
         if [[ -f "pnpm-workspace.yaml" ]] && grep -q "^allowBuilds:" pnpm-workspace.yaml; then
             grep -q "esbuild:" pnpm-workspace.yaml || sed -i '/^allowBuilds:/a\  esbuild: true' pnpm-workspace.yaml
@@ -386,7 +527,7 @@ main() {
         fi
     fi
 
-    # 2. Install TypeScript + tsx (run .ts files directly, no build step needed)
+    # 9. Install TypeScript + tsx (run .ts files directly, no build step needed)
     print_step "Installing TypeScript runtime (typescript, tsx, @types/node)..."
     case "$PKG_MANAGER" in
         npm)  npm install --save-dev "typescript@^5" tsx @types/node ;;
@@ -396,27 +537,24 @@ main() {
     esac
     print_success "Installed TypeScript runtime"
 
-    # 3. Generate tsconfig.json
+    # 10. Generate tsconfig.json
     print_step "Generating tsconfig.json..."
     generate_tsconfig > tsconfig.json
     print_success "Generated tsconfig.json"
 
-    # 4. Create src directory with entry stub
-    print_step "Creating src directory..."
-    mkdir -p src
+    # 11. Add src/index.ts entry stub (src/ already created in step 6)
     [[ ! -f "src/index.ts" ]] && generate_index_ts > src/index.ts
-    print_success "Created src directory"
 
-    # 5. Install development tools
-    if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
-        print_step "Installing development tools..."
+    # 12. Install Node.js dev tools
+    if [[ "$INSTALL_NODE_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+        print_step "Installing Node.js dev tools..."
         case "$PKG_MANAGER" in
             npm)  npm install --save-dev eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
             pnpm) pnpm add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
             yarn) yarn add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
             bun)  bun add -D eslint @eslint/js typescript-eslint prettier eslint-config-prettier vitest ;;
         esac
-        print_success "Installed development tools"
+        print_success "Installed Node.js dev tools"
 
         print_step "Generating eslint.config.mjs..."
         generate_eslint_config > eslint.config.mjs
@@ -427,7 +565,7 @@ main() {
         print_success "Generated .prettierrc"
     fi
 
-    # 6. Add npm scripts to package.json
+    # 13. Add npm scripts to package.json
     print_step "Updating package.json..."
     node -e "
         const fs = require('fs');
@@ -436,7 +574,7 @@ main() {
         pkg.scripts.start = 'tsx src/index.ts';
         pkg.scripts.build = 'tsc';
         pkg.scripts.typecheck = 'tsc --noEmit';
-        $( [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "
+        $( [[ "$INSTALL_NODE_DEV_TOOLS" =~ ^[Yy]$ ]] && echo "
         pkg.scripts.lint = 'eslint .';
         pkg.scripts.format = 'prettier --write .';
         pkg.scripts.test = 'vitest run';
@@ -449,24 +587,24 @@ main() {
     "
     print_success "Updated package.json"
 
-    # 7. Generate .gitignore (only when there is no existing one)
+    # 14. Generate .gitignore (merged Python + Node.js; only when there is no existing one)
     if [[ $has_existing_gitignore -eq 0 ]]; then
-        print_step "Generating .gitignore..."
+        print_step "Generating merged .gitignore..."
         generate_gitignore > .gitignore
-        print_success "Generated .gitignore"
+        print_success "Generated merged .gitignore"
     fi
 
-    # 8. Generate .vscode/settings.json (skip if existing)
+    # 15. Generate .vscode/settings.json (merged; skip if existing)
     if [[ $has_existing_vscode -eq 1 ]]; then
         print_warning "Existing .vscode/settings.json preserved (skipped)"
     else
-        print_step "Generating .vscode/settings.json..."
+        print_step "Generating merged .vscode/settings.json..."
         mkdir -p .vscode
-        generate_vscode_settings > .vscode/settings.json
-        print_success "Generated .vscode/settings.json"
+        cp "${SCRIPT_DIR}/templates/vscode/fullstack.settings.json" .vscode/settings.json
+        print_success "Generated merged .vscode/settings.json"
     fi
 
-    # 9. Generate .nvmrc / .node-version (if version manager was used)
+    # 16. Generate .nvmrc / .node-version (if version manager was used)
     if [[ "$VERSION_MANAGER" != "none" ]]; then
         print_step "Generating .nvmrc and .node-version..."
         echo "$SELECTED_NODE_VERSION" > .nvmrc
@@ -474,16 +612,16 @@ main() {
         print_success "Generated .nvmrc and .node-version"
     fi
 
-    # 10. Create CLAUDE.md.temp (skip if existing)
+    # 17. Create CLAUDE.md.temp (merged; skip if existing)
     if [[ $has_existing_claude_md -eq 1 ]]; then
         print_warning "Existing CLAUDE.md.temp preserved (skipped)"
     else
-        print_step "Creating CLAUDE.md.temp..."
-        cp "${SCRIPT_DIR}/templates/claude/nodejs.template.md" CLAUDE.md.temp
-        print_success "Created CLAUDE.md.temp"
+        print_step "Creating merged CLAUDE.md.temp..."
+        cp "${SCRIPT_DIR}/templates/claude/fullstack.template.md" CLAUDE.md.temp
+        print_success "Created merged CLAUDE.md.temp"
     fi
 
-    # 11. Initialize Git (skip if existing)
+    # 18. Initialize Git (skip if existing)
     if [[ $has_existing_git -eq 1 ]]; then
         print_warning "Existing .git/ preserved (skipped git init)"
     else
@@ -500,7 +638,11 @@ main() {
     echo -e "${GREEN}🎉 Setup complete!${NC}"
     echo "=================================================="
     echo ""
-    echo "Next steps:"
+    echo "Next steps (Python):"
+    echo "  uv run python                # Run Python in virtual environment"
+    echo "  source .venv/bin/activate    # Or activate the venv directly"
+    echo ""
+    echo "Next steps (Node.js):"
     if [[ "$VERSION_MANAGER" == "fnm" ]]; then
         echo "  fnm use                # Use project's Node version"
     elif [[ "$VERSION_MANAGER" == "nvm" ]]; then
@@ -508,11 +650,17 @@ main() {
     fi
     echo "  $PKG_MANAGER run start"
     echo ""
-    echo "Useful commands:"
+    echo "Useful commands (Python):"
+    echo "  uv add <package>      # Add a package"
+    echo "  uv run pytest         # Run tests"
+    echo "  uv run ruff check .   # Run linter"
+    echo "  uv run mypy .         # Run type checker"
+    echo ""
+    echo "Useful commands (Node.js):"
     echo "  $PKG_MANAGER run start       # Run src/index.ts directly (tsx)"
     echo "  $PKG_MANAGER run typecheck   # Type-check without emitting"
     echo "  $PKG_MANAGER run build       # Compile to dist/"
-    if [[ "$INSTALL_DEV_TOOLS" =~ ^[Yy]$ ]]; then
+    if [[ "$INSTALL_NODE_DEV_TOOLS" =~ ^[Yy]$ ]]; then
         echo "  $PKG_MANAGER run lint        # Run ESLint"
         echo "  $PKG_MANAGER run format      # Run Prettier"
         echo "  $PKG_MANAGER run test        # Run tests (vitest)"
