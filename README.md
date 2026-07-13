@@ -34,6 +34,24 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 
 **Prerequisites:** [Node.js](https://nodejs.org/) (via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm) recommended)
 
+### Full-stack (Python + Node.js) Environment
+
+Use this when you want **both** environments in the same repository. Running `python/setup-project.sh` and `nodejs/setup-project.sh` back-to-back in the same directory does *not* merge their `.gitignore` / `CLAUDE.md.temp` / `.vscode/settings.json` — whichever runs first "wins" and the second run silently skips regenerating those files, since both scripts preserve existing files by design. `fullstack/setup-project.sh` runs both installs in one pass and generates a merged `.gitignore`, `.vscode/settings.json`, and `CLAUDE.md.temp` that cover both languages.
+
+If you don't have a project directory yet:
+
+```bash
+mkdir my-fullstack-project && cd my-fullstack-project
+```
+
+Run the setup in your project directory:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/fullstack/setup-project.sh)
+```
+
+**Prerequisites:** both [uv](https://docs.astral.sh/uv/) and [Node.js](https://nodejs.org/) (see above)
+
 ## 2. Behavior
 
 ### Execution model
@@ -77,6 +95,14 @@ Run scripts with `uv run python src/...` — no manual `source .venv/bin/activat
 - When pnpm or yarn is selected, `packageManager` is pinned in `package.json` (`pnpm@<version>`) so [corepack](https://nodejs.org/api/corepack.html) enforces the same package manager for anyone working on the project
 
 Run scripts with `pnpm run start` (or the equivalent for your package manager).
+
+### Full-stack (Python + Node.js) Environment
+
+- Runs the Python setup and the Node.js setup in a single pass, sharing one `src/` directory (`src/__init__.py` and `src/index.ts` coexist)
+- `.gitignore` is the **merged** Python + Node.js template (base + python + nodejs, with duplicate patterns like `tmp/` deduped) — skipped if a `.gitignore` already exists
+- `.vscode/settings.json` is the **merged** template (Python interpreter path + ESLint/Prettier formatter settings) — skipped if already existing
+- `CLAUDE.md.temp` documents **both** the Python and Node.js conventions in one file — skipped if already existing
+- Same fatal-collision checks as the individual scripts apply for both languages (aborts if `.venv/`, `pyproject.toml`, `node_modules/`, `package.json`, etc. already exist)
 
 ## 3. Notes / Gotchas
 

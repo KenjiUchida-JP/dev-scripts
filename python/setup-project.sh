@@ -20,6 +20,7 @@ if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/ ]] || [[ "${BASH_SOURCE[0]}" =~ ^/proc/se
     curl -fsSL "$REPO_BASE/scripts/lib/colors.sh" -o "$TEMP_DIR/scripts/lib/colors.sh"
     curl -fsSL "$REPO_BASE/scripts/lib/validators.sh" -o "$TEMP_DIR/scripts/lib/validators.sh"
     curl -fsSL "$REPO_BASE/scripts/lib/gitignore-builder.sh" -o "$TEMP_DIR/scripts/lib/gitignore-builder.sh"
+    curl -fsSL "$REPO_BASE/scripts/lib/python-version.sh" -o "$TEMP_DIR/scripts/lib/python-version.sh"
 
     # Download template files
     mkdir -p "$TEMP_DIR/templates/gitignore"
@@ -44,6 +45,7 @@ fi
 source "${SCRIPT_DIR}/scripts/lib/colors.sh"
 source "${SCRIPT_DIR}/scripts/lib/validators.sh"
 source "${SCRIPT_DIR}/scripts/lib/gitignore-builder.sh"
+source "${SCRIPT_DIR}/scripts/lib/python-version.sh"
 
 # --------------------------------------------------
 # Custom header for Python projects
@@ -51,38 +53,6 @@ source "${SCRIPT_DIR}/scripts/lib/gitignore-builder.sh"
 print_python_header() {
     echo -e "\n${CYAN}🐍 Python Project Setup${NC}"
     echo "=================================================="
-}
-
-# Convert version string to pyXXX format (e.g., 3.14.2 → py314)
-get_py_version() {
-    local version="$1"
-    local major minor
-    major=$(echo "$version" | cut -d. -f1)
-    minor=$(echo "$version" | cut -d. -f2)
-    echo "py${major}${minor}"
-}
-
-# Get X.XX format from version string (e.g., 3.14.2 → 3.14)
-get_major_minor() {
-    local version="$1"
-    echo "$version" | cut -d. -f1,2
-}
-
-# Version format validation (alias for library function)
-validate_version() {
-    validate_python_version "$1"
-}
-
-# Get latest Python version
-get_latest_python_version() {
-    local version
-    version=$(uv python list --only-downloads 2>/dev/null | grep -E "^cpython-[0-9]+\.[0-9]+\.[0-9]+-" | grep -v "freethreaded" | head -1 | sed 's/cpython-\([0-9.]*\)-.*/\1/')
-    if [[ -z "$version" ]]; then
-        # Fallback: use 3.13 if unable to retrieve
-        echo "3.13"
-    else
-        echo "$version"
-    fi
 }
 
 # --------------------------------------------------

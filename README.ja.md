@@ -34,6 +34,24 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 
 **前提条件:** [Node.js](https://nodejs.org/)（[nvm](https://github.com/nvm-sh/nvm) または [fnm](https://github.com/Schniz/fnm) の使用を推奨）
 
+### フルスタック（Python + Node.js）環境
+
+同じリポジトリに**両方**の環境が欲しい場合はこちらを使ってください。同じディレクトリで `python/setup-project.sh` と `nodejs/setup-project.sh` を続けて実行しても、`.gitignore` / `CLAUDE.md.temp` / `.vscode/settings.json` はマージされません——どちらのスクリプトも「既存ファイルは温存する」設計のため、先に実行した方の内容がそのまま残り、後から実行した方の内容は反映されずに無視されてしまいます。`fullstack/setup-project.sh` は両方のインストールを1回のセットアップでまとめて実行し、`.gitignore`・`.vscode/settings.json`・`CLAUDE.md.temp` を両言語対応のマージ済み内容で生成します。
+
+プロジェクトディレクトリがまだない場合：
+
+```bash
+mkdir my-fullstack-project && cd my-fullstack-project
+```
+
+プロジェクトディレクトリでセットアップを実行：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/main/fullstack/setup-project.sh)
+```
+
+**前提条件:** [uv](https://docs.astral.sh/uv/) と [Node.js](https://nodejs.org/) の両方（上記参照）
+
 ## 2. 挙動
 
 ### 実行モデル
@@ -77,6 +95,14 @@ bash <(curl -fsSL https://raw.githubusercontent.com/KenjiUchida-JP/dev-scripts/m
 - pnpm または yarn を選んだ場合、`package.json` に `packageManager` フィールド（`pnpm@<version>` 等）を書き込み、[corepack](https://nodejs.org/api/corepack.html) が同じパッケージマネージャの使用を強制するようにします
 
 `pnpm run start`（または使用するパッケージマネージャの対応コマンド）でスクリプトを実行できます。
+
+### フルスタック（Python + Node.js）環境
+
+- Python セットアップと Node.js セットアップを1回のセットアップでまとめて実行し、`src/` ディレクトリを共有します（`src/__init__.py` と `src/index.ts` が共存）
+- `.gitignore` は Python + Node.js の**マージ済み**テンプレート（base + python + nodejs。`tmp/` のような重複パターンは除去済み）——既存の `.gitignore` があればスキップ
+- `.vscode/settings.json` も**マージ済み**テンプレート（Python インタープリタパス + ESLint/Prettier のフォーマッタ設定）——既存があればスキップ
+- `CLAUDE.md.temp` には Python と Node.js **両方**の運用ルールが1ファイルにまとまっています——既存があればスキップ
+- 個別スクリプトと同じ致命的衝突チェックを両言語分適用します（`.venv/`、`pyproject.toml`、`node_modules/`、`package.json` 等が既存の場合は中止）
 
 ## 3. 補足事項・ハマりどころ
 

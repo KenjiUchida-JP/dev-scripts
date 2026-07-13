@@ -121,6 +121,39 @@ build_gitignore_single "$TEMPLATES_DIR" "python" > .gitignore
 build_gitignore_single "$TEMPLATES_DIR" "nodejs" > .gitignore
 ```
 
+#### build_gitignore_combined
+```bash
+build_gitignore_combined "$TEMPLATES_DIR" > .gitignore
+```
+
+Builds a merged `.gitignore` for full-stack (Python + Node.js) projects by concatenating `base.template` + `python.template` + `nodejs.template`, then deduping any ignore pattern that appears in both language templates (e.g. `tmp/`, `*.local`) while always keeping comments and blank lines so each section's headers stay intact. Used by `fullstack/setup-project.sh`.
+
+### python-version.sh
+
+Python version detection helpers, shared by `python/setup-project.sh` and `fullstack/setup-project.sh`.
+
+**Functions:**
+```bash
+get_latest_python_version   # Latest CPython version available via `uv python list`
+get_py_version "3.14.2"     # -> "py314" (for [tool.ruff] target-version)
+get_major_minor "3.14.2"    # -> "3.14"  (for [tool.mypy] python_version)
+validate_version "3.14.2"   # Alias for validate_python_version
+```
+
+### node-version.sh
+
+Node.js version manager (fnm/nvm) detection helpers, shared by `nodejs/setup-project.sh` and `fullstack/setup-project.sh`.
+
+**Functions:**
+```bash
+command_exists "pnpm"       # Returns 0 if the command is on PATH
+fnm_available                # Returns 0 if fnm is installed
+nvm_available                # Returns 0 if nvm is loaded
+load_nvm                     # Sources nvm.sh from common install locations
+get_fnm_versions / get_nvm_versions        # Installed Node versions
+get_fnm_lts_version / get_nvm_lts_version  # Latest LTS version available to install
+```
+
 ## Usage in Setup Scripts
 
 ### Import Libraries
@@ -251,3 +284,4 @@ bash /path/to/dev-scripts/python/setup-project.sh
 - [Templates](../../templates/README.md) - Template system
 - [Python Setup](../../python/setup-project.sh) - Python setup script
 - [Node.js Setup](../../nodejs/setup-project.sh) - Node.js setup script
+- [Full-stack Setup](../../fullstack/setup-project.sh) - Combined Python + Node.js setup script
